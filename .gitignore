@@ -11,3 +11,6 @@
 *.exe
 *.c.d
 .DS_Store
+__pycache__/
+*.pyc
+core
