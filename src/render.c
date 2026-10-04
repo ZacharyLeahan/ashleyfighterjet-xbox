@@ -65,10 +65,45 @@ static void alien(SDL_Renderer *r,int x,int y,int n,float t) {
     ellipse(r,x,y+2,25,10,colors[n%4]);
     for(int i=0;i<5;++i)ellipse(r,x-18+i*9,y+5,2,2,sinf(t*5+i)>0?0xfff8b8:0xbcd4ff);
 }
+static void blaster(SDL_Renderer *r,const Game *g) {
+    const Boss *b=&g->boss; int x=(int)b->x,y=(int)b->y;
+    int ry=65+(int)(sinf(b->time*3)*3);
+    ellipse(r,x,y,80,80,0x241640);
+    /* Three crown points, a purple jelly body, and tracking googly eyes. */
+    for(int dy=0;dy<23;++dy) {
+        box(r,x-30,y-83+dy,dy/2+1,1,0xffd76e);
+        box(r,x+30-dy/2,y-83+dy,dy/2+1,1,0xffd76e);
+        box(r,x-dy/2,y-89+dy,dy+1,1,0xffd76e);
+    }
+    box(r,x-30,y-67,61,12,0xffd76e);
+    ellipse(r,x,y,65,ry,b->flash>0?0xffffff:0xb44df0);
+    ellipse(r,x-21,y-28,25,19,0xc976f4);
+    ellipse(r,x-33,y+22,10,10,0xe0b3ff);ellipse(r,x+36,y+11,7,7,0xe0b3ff);
+    int look=(int)((g->players[0].x-b->x)/640*18);
+    for(int side=-1;side<=1;side+=2) {
+        int ex=x+side*23;
+        ellipse(r,ex,y-13,16,19,0xffffff);
+        ellipse(r,ex+look,y-10,8,8,0x1a1a2e);
+        color(r,0x50236e);
+        for(int thick=0;thick<5;++thick)
+            SDL_RenderDrawLine(r,ex+side*14,y-40+thick,ex-side*10,y-30+thick);
+    }
+    color(r,0x1a1a2e);
+    for(int dx=-17;dx<=17;++dx) {
+        int mouth=y+25+dx*dx/35;
+        SDL_RenderDrawLine(r,x+dx,mouth,x+dx,mouth+4);
+    }
+}
 void draw_game(SDL_Renderer *r,const Game *g,float t) {
     color(r,0x0b0b2a); SDL_RenderClear(r);
     for(int i=0;i<100;++i) { int x=24+(i*137)%592; float speed=16+(i%3)*20;
         int y=(int)fmodf(i*79+t*speed,480); box(r,x,y,1+i%2,1+i%2,i%3?0x667aab:0xbcd4ff); }
+    if(g->boss.active)blaster(r,g);
+    for(int b=0;b<MAX_BOSS_SHOTS;++b)if(g->boss_shots[b].active) {
+        const BossShot *shot=&g->boss_shots[b];
+        ellipse(r,(int)shot->x,(int)shot->y,9,9,0xb44df0);
+        ellipse(r,(int)shot->x,(int)shot->y,5,5,0xff5ecf);
+    }
     for(int i=0;i<MAX_ENEMIES;++i)if(g->enemies[i].active)alien(r,(int)g->enemies[i].x,(int)g->enemies[i].y,g->enemies[i].color,t);
     for(int i=0;i<MAX_BULLETS;++i)if(g->bullets[i].active) { Entity b=g->bullets[i]; ellipse(r,(int)b.x,(int)b.y,3,8,b.owner?0xff799f:0xffe36e); }
     for(int i=0;i<g->player_count;++i) {
@@ -81,8 +116,14 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
             snprintf(hud,sizeof(hud),"P%d AMMO %d SCORE %d HEALTH %d",i+1,p->ammo,p->score,p->health);
             centered(r,18+i*20,hud,2,i?0xff799f:0xbcd4ff);
         }
-        box(r,48,62,544,3,0x253058); box(r,48,62,544*g->resolved/LEVEL_ENEMIES,3,0x57e89c);
-        centered(r,438,"RIGHT STICK TO ROLL AND DODGE",2,0xbcd4ff);
+        if(g->boss.active) {
+            centered(r,60,"BLASTER BOSS",2,0xe0b3ff);
+            box(r,48,79,544,5,0x253058);
+            box(r,48,79,544*g->boss.health/BOSS_HEALTH,5,0xb44df0);
+        } else {
+            box(r,48,62,544,3,0x253058); box(r,48,62,544*g->resolved/LEVEL_ENEMIES,3,0x57e89c);
+        }
+        centered(r,438,g->boss.active?"DODGE BOSS SHOTS TO EARN BULLETS":"RIGHT STICK TO ROLL AND DODGE",2,0xbcd4ff);
     } else {
         box(r,45,115,550,223,0x111535);
         if(g->state==MENU) {

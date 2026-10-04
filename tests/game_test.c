@@ -21,8 +21,9 @@ int main(void) {
     step(&g,(Input){.start=1},1.0f/60);assert(g.state==PLAYING&&g.players[0].health==3);
     /* Stay in an empty lane: all 24 scheduled aliens must resolve and win. */
     start(&g);g.players[0].x=592;g.players[0].y=92;
-    for(int i=0;i<2400&&g.state==PLAYING;++i)step(&g,(Input){0},1.0f/60);
-    assert(g.state==WON&&g.spawned==24&&g.resolved==24&&g.players[0].score==24&&g.players[0].ammo==34);
+    for(int i=0;i<2400&&g.state==PLAYING&&!g.boss.active;++i)step(&g,(Input){0},1.0f/60);
+    assert(g.state==PLAYING&&g.boss.active&&g.boss.health==16&&g.spawned==24&&g.resolved==24&&g.players[0].score==24&&g.players[0].ammo==34);
+    g.boss.health=0;step(&g,(Input){0},1.0f/60);assert(g.state==WON);
     step(&g,(Input){.start=1},1.0f/60);assert(g.state==PLAYING&&g.players[0].score==0);
     /* Four directional dodges work without ammo and preserve bounds. */
     for(int direction=0;direction<4;++direction) {
@@ -87,7 +88,40 @@ int main(void) {
     /* Both pilots complete the unchanged short level. */
     start(&g);game_set_players(&g,2);
     for(int p=0;p<2;++p){g.players[p].x=592;g.players[p].y=92;}
-    for(int i=0;i<2400&&g.state==PLAYING;++i)step(&g,(Input){0},1.0f/60);
-    assert(g.state==WON&&g.resolved==24&&g.players[0].score==24&&g.players[1].score==24);
-    puts("PASS: solo and co-op collisions, movement, firing, rewards, damage, waves, restart, hotplug stats");
+    for(int i=0;i<2400&&g.state==PLAYING&&!g.boss.active;++i)step(&g,(Input){0},1.0f/60);
+    assert(g.state==PLAYING&&g.boss.active&&g.resolved==24&&g.players[0].score==24&&g.players[1].score==24);
+    /* Boss entry refills living pilots, and does not reset their health/score. */
+    start(&g);game_set_players(&g,2);g.resolved=LEVEL_ENEMIES;g.spawned=LEVEL_ENEMIES;
+    g.players[0].ammo=0;g.players[1].ammo=30;g.players[0].score=7;
+    step(&g,(Input){0},1.0f/60);
+    assert(g.boss.active&&g.boss.entering&&g.players[0].ammo==24&&g.players[1].ammo==30&&g.players[0].score==7);
+    for(int i=0;i<240&&g.boss.entering;++i)step(&g,(Input){0},1.0f/60);
+    assert(!g.boss.entering&&g.boss.volleys==0);
+    /* Low health changes one aimed bolt into a three-shot spread. */
+    g.boss.health=3;g.boss.fire_clock=0;
+    step(&g,(Input){0},1.0f/60);
+    int shots=0;for(int i=0;i<MAX_BOSS_SHOTS;++i)shots+=g.boss_shots[i].active;
+    assert(shots==3&&g.boss.volleys==1);
+    /* Dodging replenishes ammo; a hit damages just one pilot. */
+    for(int i=0;i<MAX_BOSS_SHOTS;++i)g.boss_shots[i].active=0;
+    g.boss_shots[0]=(BossShot){.x=100,.y=509,.vy=310,.active=1};
+    step(&g,(Input){0},1.0f/60);assert(g.players[0].ammo==25&&g.players[1].ammo==31);
+    g.boss_shots[0]=(BossShot){.x=g.players[1].x,.y=g.players[1].y,.active=1};
+    step(&g,(Input){0},1.0f/60);assert(g.players[0].health==3&&g.players[1].health==2);
+    g.boss_shots[0]=(BossShot){.x=g.players[0].x,.y=g.players[0].y,.active=1};
+    step(&g,(Input){.roll_x=1},1.0f/60);assert(g.players[0].health==3);
+    /* Player-owned hits defeat Blaster and award the final hitter the bonus. */
+    g.boss.health=1;g.boss_shots[0].active=0;
+    g.bullets[0]=(Entity){.x=g.boss.x,.y=g.boss.y+20,.active=1,.owner=1};
+    step(&g,(Input){0},1.0f/60);
+    assert(g.state==WON&&!g.boss.active&&g.players[1].score==11);
+    step(&g,(Input){.start=1},1.0f/60);
+    assert(g.state==PLAYING&&!g.boss.active&&g.boss.health==0);
+    /* Boss projectiles can end a run; restarting clears every projectile. */
+    g.resolved=g.spawned=LEVEL_ENEMIES;game_set_players(&g,1);
+    step(&g,(Input){0},1.0f/60);g.players[0].health=1;
+    g.boss_shots[0]=(BossShot){.x=g.players[0].x,.y=g.players[0].y,.active=1};
+    step(&g,(Input){0},1.0f/60);assert(g.state==LOST);
+    step(&g,(Input){.start=1},1.0f/60);assert(!g.boss_shots[0].active&&!g.boss.active);
+    puts("PASS: solo and co-op collisions, movement, firing, rewards, damage, waves, restart, hotplug stats, rolls, Blaster boss");
 }

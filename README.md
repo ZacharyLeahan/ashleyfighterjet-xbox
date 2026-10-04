@@ -8,7 +8,7 @@ Gameplay recorded on an original Xbox through our [ESP-KVM fork](https://github.
 
 ## Gameplay
 
-Fly through a short, 24-alien level. Each pilot starts with 10 bullets and three health. Shooting an alien earns the shooter three points; letting one pass earns each surviving pilot one point and one bullet. Finish the wave to win.
+Fly through a short, 24-alien level. Each pilot starts with 10 bullets and three health. Shooting an alien earns the shooter three points; letting one pass earns each surviving pilot one point and one bullet. After the wave, defeat Blaster to win.
 
 Rolls are unlimited and cost no ammo. Flick the right stick in a direction, then let it return to center before the next roll. The jet is protected during its short roll and burst, even with no shots remaining.
 
@@ -33,7 +33,9 @@ The game uses a fixed 640 × 480 logical playfield and a 60 Hz simulation. Ships
 - [`src/render.c`](src/render.c) — original placeholder graphics, scrolling background, HUD, and result screens.
 - [`tests/`](tests/) — solo/co-op gameplay tests and SDL controller integration tests.
 
-This is a small playable adaptation. The current level has one enemy type and deterministic waves; sound, bosses, upgrades, and saved progress are future work.
+This is a small playable adaptation. The single level has deterministic alien waves followed by Blaster, the first boss from the HTML5 game: a crowned purple jelly that sways and fires aimed pink bolts. Blaster has 16 health, fires faster as it takes damage, and adds two- and three-shot spreads near defeat. Each hit earns one point; the final hitter earns a ten-point bonus. In co-op, volleys alternate between surviving pilots.
+
+Living pilots enter the boss fight with at least 24 bullets. Boss bolts that leave the screen earn each surviving pilot one bullet, allowing recovery after missed shots. Rolls protect against both the boss and its bolts. Sound, upgrades, and saved progress are future work.
 
 ## Build on macOS
 
