@@ -8,9 +8,11 @@
 #define LEVEL_ENEMIES 24
 typedef enum { MENU, PLAYING, WON, LOST } GameState;
 typedef struct { float x, y; int active, color, owner; } Entity;
-typedef struct { float x, y; int fire, start; } Input;
+typedef struct { float x, y; int fire, start; float roll_x, roll_y; } Input;
 typedef struct {
     float x, y, shot_clock, invincible;
+    float roll_clock, roll_x, roll_y;
+    int roll_held;
     int health, score, ammo;
 } Player;
 typedef struct {

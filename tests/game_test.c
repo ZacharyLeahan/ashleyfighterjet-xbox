@@ -24,6 +24,29 @@ int main(void) {
     for(int i=0;i<2400&&g.state==PLAYING;++i)step(&g,(Input){0},1.0f/60);
     assert(g.state==WON&&g.spawned==24&&g.resolved==24&&g.players[0].score==24&&g.players[0].ammo==34);
     step(&g,(Input){.start=1},1.0f/60);assert(g.state==PLAYING&&g.players[0].score==0);
+    /* Four directional dodges work without ammo and preserve bounds. */
+    for(int direction=0;direction<4;++direction) {
+        start(&g);g.players[0].ammo=0;
+        float x=g.players[0].x,y=g.players[0].y;
+        Input roll={.roll_x=direction<2?(direction?1:-1):0,
+                    .roll_y=direction>=2?(direction==2?-1:1):0};
+        g.enemies[0]=(Entity){.x=x,.y=y,.active=1};
+        step(&g,roll,1.0f/60);
+        assert(g.players[0].health==3&&g.players[0].roll_clock>0);
+        for(int i=0;i<30;++i)step(&g,roll,1.0f/60);
+        assert(g.players[0].roll_clock==0&&g.players[0].ammo==0);
+        assert(direction==0?g.players[0].x<x:direction==1?g.players[0].x>x:
+               direction==2?g.players[0].y<y:g.players[0].y>y);
+        /* Holding cannot auto-roll; releasing allows another immediately. */
+        step(&g,(Input){0},1.0f/60);step(&g,roll,1.0f/60);
+        assert(g.players[0].roll_clock>0);
+    }
+    start(&g);g.players[0].x=592;g.players[0].y=92;
+    for(int i=0;i<30;++i)step(&g,(Input){.roll_y=-1},1.0f/60);
+    assert(g.players[0].y==92);
+    step(&g,(Input){0},1.0f/60);
+    for(int i=0;i<30;++i)step(&g,(Input){.roll_x=1},1.0f/60);
+    assert(g.players[0].x==592);
     /* Shared enemies resolve once; the shooter owns the reward. */
     start(&g);game_set_players(&g,2);
     g.enemies[0]=(Entity){.x=200,.y=100,.active=1};g.spawned=1;

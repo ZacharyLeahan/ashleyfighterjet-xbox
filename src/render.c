@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 static void color(SDL_Renderer *r, unsigned c) { SDL_SetRenderDrawColor(r,c>>16,(c>>8)&255,c&255,255); }
 static void box(SDL_Renderer *r,int x,int y,int w,int h,unsigned c) { SDL_Rect b={x,y,w,h}; color(r,c); SDL_RenderFillRect(r,&b); }
 static void ellipse(SDL_Renderer *r,int x,int y,int rx,int ry,unsigned c) {
@@ -34,13 +35,28 @@ static void text(SDL_Renderer *r,int x,int y,const char *s,int scale,unsigned c)
     }
 }
 static void centered(SDL_Renderer *r,int y,const char *s,int scale,unsigned c) { text(r,(640-(int)strlen(s)*6*scale)/2,y,s,scale,c); }
-static void jet(SDL_Renderer *r,int x,int y,float t,int player) {
+static void jet_box(SDL_Renderer *r,int x,int y,float sx,float sy,int dx,int dy,int w,int h,unsigned c) {
+    int ax=x+(int)(dx*sx), bx=x+(int)((dx+w)*sx);
+    int ay=y+(int)(dy*sy), by=y+(int)((dy+h)*sy);
+    box(r,ax<bx?ax:bx,ay<by?ay:by,abs(bx-ax)+1,abs(by-ay)+1,c);
+}
+static void jet_ellipse(SDL_Renderer *r,int x,int y,float sx,float sy,int dx,int dy,int rx,int ry,unsigned c) {
+    ellipse(r,x+(int)(dx*sx),y+(int)(dy*sy),1+(int)(rx*fabsf(sx)),1+(int)(ry*fabsf(sy)),c);
+}
+static void jet(SDL_Renderer *r,int x,int y,float t,int player,const Player *p) {
+    float sx=1,sy=1;
+    if(p->roll_clock>0) {
+        float spin=cosf((0.4f-p->roll_clock)/0.3f*6.2831853f);
+        if(p->roll_clock<=0.1f)spin=1;
+        if(p->roll_x)sx=spin;else sy=spin;
+        ellipse(r,x,y,38,38,0x253d66);
+    }
     int flame=12+(int)(6*(1+sinf(t*25)));
-    ellipse(r,x-8,y+27,4,flame,0xff9d3f); ellipse(r,x+8,y+27,4,flame,0xff9d3f);
-    for(int dy=-10;dy<=26;++dy) { int width=(dy+10)*30/36; box(r,x-width,y+dy,width*2+1,1,player?0xff799f:0x4f8cff); }
-    box(r,x-30,y+22,5,5,0xffe36e); box(r,x+26,y+22,5,5,0xffe36e);
-    ellipse(r,x,y,9,31,0xbcd4ff); ellipse(r,x,y-7,5,12,0x174b81);
-    box(r,x-2,y-13,2,8,0xa8e8ff);
+    jet_ellipse(r,x,y,sx,sy,-8,27,4,flame,0xff9d3f); jet_ellipse(r,x,y,sx,sy,8,27,4,flame,0xff9d3f);
+    for(int dy=-10;dy<=26;++dy) { int width=(dy+10)*30/36; jet_box(r,x,y,sx,sy,-width,dy,width*2+1,1,player?0xff799f:0x4f8cff); }
+    jet_box(r,x,y,sx,sy,-30,22,5,5,0xffe36e); jet_box(r,x,y,sx,sy,26,22,5,5,0xffe36e);
+    jet_ellipse(r,x,y,sx,sy,0,0,9,31,0xbcd4ff); jet_ellipse(r,x,y,sx,sy,0,-7,5,12,0x174b81);
+    jet_box(r,x,y,sx,sy,-2,-13,2,8,0xa8e8ff);
 }
 static void alien(SDL_Renderer *r,int x,int y,int n,float t) {
     static const unsigned colors[]={0xff5e8a,0x2ec5ff,0xffb020,0x3fe08f};
@@ -57,7 +73,7 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
     for(int i=0;i<MAX_BULLETS;++i)if(g->bullets[i].active) { Entity b=g->bullets[i]; ellipse(r,(int)b.x,(int)b.y,3,8,b.owner?0xff799f:0xffe36e); }
     for(int i=0;i<g->player_count;++i) {
         const Player *p=&g->players[i];
-        if(p->health&&(p->invincible<=0||(int)(t*12)%2))jet(r,(int)p->x,(int)p->y,t,i);
+        if(p->health&&(p->roll_clock>0||p->invincible<=0||(int)(t*12)%2))jet(r,(int)p->x,(int)p->y,t,i,p);
     }
     if(g->state==PLAYING) {
         for(int i=0;i<g->player_count;++i) {
@@ -66,7 +82,7 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
             centered(r,18+i*20,hud,2,i?0xff799f:0xbcd4ff);
         }
         box(r,48,62,544,3,0x253058); box(r,48,62,544*g->resolved/LEVEL_ENEMIES,3,0x57e89c);
-        centered(r,438,"DODGE ALIENS TO EARN BULLETS",2,0xbcd4ff);
+        centered(r,438,"RIGHT STICK TO ROLL AND DODGE",2,0xbcd4ff);
     } else {
         box(r,45,115,550,223,0x111535);
         if(g->state==MENU) {
@@ -85,7 +101,7 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
             }
         }
         centered(r,276,"PRESS START TO FLY",2,0xffffff);
-        centered(r,308,"LEFT STICK TO STEER - A TO SHOOT",2,0xbcd4ff);
+        centered(r,308,"LEFT STICK MOVE - A SHOOT - RIGHT ROLL",2,0xbcd4ff);
     }
     SDL_RenderPresent(r);
 }

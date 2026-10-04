@@ -34,6 +34,25 @@ void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
     for (int i=0; i<g->player_count; ++i) {
         Player *p=&g->players[i]; Input in=inputs[i];
         if (!p->health) continue;
+        /* Flick, then release to re-arm: unlimited rolls, no ammo cost. */
+        float rx=clamp(in.roll_x,-1,1), ry=clamp(in.roll_y,-1,1);
+        float strength=fmaxf(fabsf(rx),fabsf(ry));
+        if (strength<0.25f) p->roll_held=0;
+        if (strength>=0.65f && !p->roll_held) {
+            p->roll_held=1;
+            if (p->roll_clock<=0) {
+                p->roll_clock=0.4f;
+                p->roll_x=fabsf(rx)>=fabsf(ry)?(rx>0?1:-1):0;
+                p->roll_y=p->roll_x?0:(ry>0?1:-1);
+            }
+        }
+        /* The last tenth of a second jolts the jet in the chosen direction. */
+        float burst=fminf(p->roll_clock,0.1f)-fminf(fmaxf(p->roll_clock-dt,0),0.1f);
+        p->x=clamp(p->x+p->roll_x*720*burst,48,592);
+        p->y=clamp(p->y+p->roll_y*720*burst,92,400);
+        int rolling=p->roll_clock>0;
+        p->roll_clock=fmaxf(p->roll_clock-dt,0);
+        if (rolling) p->invincible=fmaxf(p->invincible,dt*2);
         float ix=clamp(in.x,-1,1), iy=clamp(in.y,-1,1);
         float length=sqrtf(ix*ix+iy*iy);
         if (length>1) { ix/=length; iy/=length; }

@@ -20,9 +20,13 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
         button(0,SDL_CONTROLLER_BUTTON_A,1);button(1,SDL_CONTROLLER_BUTTON_A,1);
         assert(SDL_JoystickSetVirtualAxis(sticks[0],SDL_CONTROLLER_AXIS_LEFTX,-32767)==0);
         assert(SDL_JoystickSetVirtualAxis(sticks[1],SDL_CONTROLLER_AXIS_LEFTX,32767)==0);
+        assert(SDL_JoystickSetVirtualAxis(sticks[0],SDL_CONTROLLER_AXIS_RIGHTX,-32767)==0);
+        assert(SDL_JoystickSetVirtualAxis(sticks[1],SDL_CONTROLLER_AXIS_RIGHTY,-32767)==0);
         phase=2;
     } else if(phase==2&&g->players[0].ammo==9&&g->players[1].ammo==9) {
         assert(g->players[0].x<220&&g->players[1].x>420);
+        assert(g->players[0].roll_clock>0&&g->players[0].roll_x==-1);
+        assert(g->players[1].roll_clock>0&&g->players[1].roll_y==-1);
         button(0,SDL_CONTROLLER_BUTTON_A,0);button(1,SDL_CONTROLLER_BUTTON_A,0);
         assert(SDL_JoystickDetachVirtual(devices[2])==0);
         assert(SDL_JoystickDetachVirtual(devices[0])==0);phase=3;

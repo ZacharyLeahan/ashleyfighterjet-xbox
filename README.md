@@ -10,6 +10,8 @@ Gameplay recorded on an original Xbox through our [ESP-KVM fork](https://github.
 
 Fly through a short, 24-alien level. Each pilot starts with 10 bullets and three health. Shooting an alien earns the shooter three points; letting one pass earns each surviving pilot one point and one bullet. Finish the wave to win.
 
+Rolls are unlimited and cost no ammo. Flick the right stick in a direction, then let it return to center before the next roll. The jet is protected during its short roll and burst, even with no shots remaining.
+
 Connect one controller for solo play or two for cooperative play. P1 flies the blue jet; P2 flies the pink jet. Both pilots share the same enemies, with separate scores, ammo, and health. Jets can overlap freely. If one pilot gets knocked out, the teammate can continue. The result screen compares their scores.
 
 Controllers can connect or disconnect during play. Pilot stats are preserved within the run; if P1 disconnects, the remaining pilot becomes P1. Only two controllers participate.
@@ -18,6 +20,7 @@ Controllers can connect or disconnect during play. Pilot stats are preserved wit
 | --- | --- |
 | Left stick or D-pad | Move |
 | A | Shoot |
+| Right stick flick | Roll/flip, then burst left, right, forward, or backward |
 | Start | Begin or restart the run |
 
 ## Code

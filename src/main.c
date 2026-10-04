@@ -65,6 +65,8 @@ int main(void) {
         in[0].y=(float)(keys[SDL_SCANCODE_DOWN]-keys[SDL_SCANCODE_UP]);
         in[0].fire=keys[SDL_SCANCODE_SPACE]; in[0].start=keys[SDL_SCANCODE_RETURN];
         for(int i=0;i<MAX_PLAYERS;++i)if(pads[i]) {
+            in[i].roll_x=SDL_GameControllerGetAxis(pads[i],SDL_CONTROLLER_AXIS_RIGHTX)/32767.0f;
+            in[i].roll_y=SDL_GameControllerGetAxis(pads[i],SDL_CONTROLLER_AXIS_RIGHTY)/32767.0f;
             in[i].x+=axis(SDL_GameControllerGetAxis(pads[i],SDL_CONTROLLER_AXIS_LEFTX));
             in[i].y+=axis(SDL_GameControllerGetAxis(pads[i],SDL_CONTROLLER_AXIS_LEFTY));
             in[i].x+=SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_DPAD_RIGHT)-SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_DPAD_LEFT);
