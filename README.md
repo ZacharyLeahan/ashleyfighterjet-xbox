@@ -1,100 +1,76 @@
-# Ashley's Fighter Jet — Xbox prototype
+# Ashley's Fighter Jet — Xbox
 
-A small C adaptation of the HTML5 game made with Ashley. Fly a blue jet through scrolling stars, dodge friendly-looking colorful UFOs, and shoot. Start with 10 bullets; dodging earns one bullet and one point, shooting an alien earns three points. Survive 24 aliens to win (about 32 seconds). Each pilot has three health; Start restarts. With two connected controllers, two jets share the same level.
+An original Xbox homebrew adaptation of [Ashley’s Fighter Jet](https://github.com/ZacharyLeahan/ashleyfighterjet), the HTML5 game I made with my daughter Ashley. Written in C with the open-source nxdk SDK and SDL2, it brings our blue jet, scrolling stars, and colorful UFOs to Xbox controllers, with local cooperative play.
 
-![Ashley's Fighter Jet gameplay captured from a physical original Xbox](docs/media/xbox-gameplay-20261004-0148.gif)
+![Ashley’s Fighter Jet running on a physical original Xbox](docs/media/xbox-gameplay-20261004-0148.gif)
 
-About nine seconds of real Xbox gameplay from microSD recording `up-000148.ts`, captured on 2026-10-04 through our [ESP-KVM fork](https://github.com/ZacharyLeahan/espkvm). The 480p recording delivered about 27 fps; this GIF is 25 fps. These are capture rates, not measurements of the game's rendering frame rate.
+Gameplay recorded on an original Xbox through our [ESP-KVM fork](https://github.com/ZacharyLeahan/espkvm).
 
-The HTML5 reference is [Ashley’s Fighter Jet](https://github.com/ZacharyLeahan/ashleyfighterjet), commit `4ad80b38d9d38fecd79c5dcf823747032a3677a9`. Its title, blue delta jet, navy sky, yellow/orange accents, green UFO pilots, and ammo mechanic guide this adaptation. The Xbox adaptation has its own repository and build history; the HTML5 source remains in its original repository. This prototype has no Raptor assets or code.
+## Gameplay
 
-## Setup and build on macOS
+Fly through a short, 24-alien level. Each pilot starts with 10 bullets and three health. Shooting an alien earns the shooter three points; letting one pass earns each surviving pilot one point and one bullet. Finish the wave to win.
+
+Connect one controller for solo play or two for cooperative play. P1 flies the blue jet; P2 flies the pink jet. Both pilots share the same enemies, with separate scores, ammo, and health. Jets can overlap freely. If one pilot gets knocked out, the teammate can continue. The result screen compares their scores.
+
+Controllers can connect or disconnect during play. Pilot stats are preserved within the run; if P1 disconnects, the remaining pilot becomes P1. Only two controllers participate.
+
+| Control | Action |
+| --- | --- |
+| Left stick or D-pad | Move |
+| A | Shoot |
+| Start | Begin or restart the run |
+
+## Code
+
+The game uses a fixed 640 × 480 logical playfield and a 60 Hz simulation. Ships, aliens, stars, and a small bitmap font are drawn in code, without external art assets.
+
+- [`src/game.c`](src/game.c) — platform-independent movement, waves, collisions, bullet ownership, scoring, and game states.
+- [`src/game.h`](src/game.h) — shared game, player, entity, and input types.
+- [`src/main.c`](src/main.c) — SDL initialization, controller discovery, input routing, and the fixed-step loop.
+- [`src/render.c`](src/render.c) — original placeholder graphics, scrolling background, HUD, and result screens.
+- [`tests/`](tests/) — solo/co-op gameplay tests and SDL controller integration tests.
+
+This is a small playable adaptation. The current level has one enemy type and deterministic waves; sound, bosses, upgrades, and saved progress are future work.
+
+## Build on macOS
 
 ```sh
 brew install cmake coreutils llvm lld
 ./scripts/setup-nxdk.sh
 ./scripts/build.sh
+```
+
+nxdk is checked out separately at `~/Developer/toolchains/nxdk`; set `NXDK_DIR` to use another location. Its version is pinned in [`nxdk.lock`](nxdk.lock), with recursive submodules pinned by that SDK commit. The build uses a temporary directory to support workspace paths containing spaces.
+
+Build outputs are written to ignored `build/`: `default.xbe`, `game.iso`, matching debug symbols, a build log, and SHA-256 hashes.
+
+| Dependency | Pinned version |
+| --- | --- |
+| nxdk | `14d5ee97e73347c973f1f57b68b79ec08c9e77f2` |
+| nxdk SDL2 | `2554902f7bbf469449216ee25f88016421271cd8` |
+| extract-xiso | `b72e5b60d598ec6df80534cda19cdcd4361aa18c` |
+
+The build has been checked with LLVM/lld 23.1.2, CMake 4.4.3, and coreutils 9.12.
+
+## Host preview and tests
+
+```sh
 ./scripts/test.sh
-```
-
-nxdk stays outside this game repository, defaulting to `~/Developer/toolchains/nxdk`. Set `NXDK_DIR` to override. The build stages source in a temporary directory because nxdk Makefiles do not reliably handle spaces in workspace paths. No shell profile changes are needed.
-
-Output: `build/default.xbe`, `build/game.iso`, matching `main.exe` with DWARF information and `main.pdb`, `build.log`, and SHA-256 hashes. Assets are currently drawn in code, so the XISO needs only `default.xbe`. Keep these files together when investigating a particular build. Rebuild after edits before launching. `game.c` contains platform-independent fixed-step gameplay; SDL rendering and input live separately.
-
-## Run in xemu
-
-```sh
-brew install --cask xemu
-./scripts/run-xemu.py --bootrom /external/path/mcpx_1.0.bin \
-  --bios /external/path/homebrew-compatible-bios.bin \
-  --hdd /external/path/xbox_hdd.qcow2
-```
-
-Supply your own MCPX and BIOS files. The BIOS must support unsigned homebrew; an unmodified retail BIOS will not work in xemu. See the [official required-files documentation](https://xemu.app/docs/required-files/) for requirements and its link to a copyright-free preformatted HDD. This repository does not contain or download firmware.
-
-The launcher uses documented `-config_path`, `-dvd_path`, and `-snapshot` options. It creates a dedicated config, EEPROM, and log under `~/Library/Application Support/AshleyFighterJet/xemu-test`; HDD writes are discarded on exit. It explicitly selects **64 MB**. Your normal xemu config is not used. Use a dedicated test HDD. `--check` validates input files without launching; it does not verify firmware suitability or boot. Environment alternatives: `XBOX_MCPX`, `XBOX_BIOS`, `XBOX_HDD`.
-
-Connect one controller for single-player or two for cooperative play; only the first two supported controllers are used. Controller connection changes take effect during play. P1 is blue and P2 is pink. Jets overlap without colliding. Each pilot has separate health, ammo and score: a kill earns its shooter three points, and each surviving connected pilot earns one point and one bullet when an alien passes. A knocked-out pilot waits until restart while the teammate continues; the run ends when all connected pilots are knocked out. The result screen compares both scores. Unplugging/reconnecting preserves pilot stats within the run; unplugging P1 promotes the remaining controller and its pilot to P1. Either pilot can start/restart the shared run.
-
-Xbox controls: **Start** to begin/restart, **left stick or D-pad** to move, **A** to shoot. Bind a controller in xemu's Input settings. xemu's keyboard controller can be selected there; its default Start is Return and A is the A key. No controller-injection API is assumed.
-
-## Mac preview
-
-```sh
 brew install sdl2
+./scripts/test-controllers.sh
 ./scripts/preview.sh
 ```
 
-The same gameplay/rendering code runs on macOS: Return starts/restarts, arrows steer, Space fires; SDL controllers also work. This is a convenient preview, not Xbox validation. For controller integration tests with SDL virtual devices, run `./scripts/test-controllers.sh` (requires host SDL2). The keyboard controls P1; a second jet requires a second supported controller.
+The Mac preview runs the same gameplay and rendering code. Return starts/restarts, arrow keys move, and Space fires. SDL controllers also work; a second jet requires a second supported controller.
 
-## Pinned dependencies and validation
+Gameplay tests use AddressSanitizer and UndefinedBehaviorSanitizer and cover collisions, movement bounds, firing cooldown, scoring, damage, wave completion, restart, and cooperative play. The controller tests exercise the SDL input loop with virtual devices, including independent movement/firing, hotplug, ignoring a third controller, and retaining bullet ownership when the remaining pilot becomes P1.
 
-- nxdk: `14d5ee97e73347c973f1f57b68b79ec08c9e77f2` (`nxdk.lock`); recursive submodules use that commit's pins.
-- nxdk SDL2: `2554902f7bbf469449216ee25f88016421271cd8`.
-- extract-xiso: `b72e5b60d598ec6df80534cda19cdcd4361aa18c`.
-- Tested build tools: LLVM/lld 23.1.2, CMake 4.4.3, coreutils 9.12.
-- Installed xemu: 0.8.136, commit `fc24584ce88f0915ad7f04775bb7712c2e3f49ee`.
-- Host preview: SDL2 compatibility 2.32.74.
-- Development machine: M2 MacBook Air, 24 GB RAM, macOS 26.7.
+## Source and acknowledgments
 
-**Compiled:** minimal SDL program and playable prototype, XBE and XISO generated. **Host tests:** collisions, movement bounds, firing cooldown, dodge rewards, damage/invulnerability, loss, all 24 waves, completion, and restart pass with AddressSanitizer/UndefinedBehaviorSanitizer. **Mac visual check:** title, gameplay, UFOs, game over, restart, and shooting consuming ammo verified. **xemu boot:** verified on 2026-10-04; title screen visibly running at 64 MB using the Xbox’s existing CerBIOS plus Fancy Mouse 0.9.0 `mouse_rev1.bin` and the official HDD image. **xemu gameplay/controller validation:** pending. **Physical Xbox:** gameplay, movement, shooting, and a win screen observed in HDMI capture on 2026-10-04; full regression testing remains pending.
+The original [HTML5 game](https://github.com/ZacharyLeahan/ashleyfighterjet) remains in its own repository. This adaptation references commit `4ad80b38d9d38fecd79c5dcf823747032a3677a9` for the visual style and gameplay ideas.
 
-Known limitations: simple placeholder graphics, one enemy type, deterministic waves, no sound, pickups, boss, shop, persistence, or upgrades. This is an early adaptation, not the complete HTML5 game. nxdk emits library/linker warnings; the game sources compile without warnings. Performance and controller behavior on Xbox still need testing. Emulator results will not establish physical Xbox compatibility. The separate ESP-KVM project is untouched.
+Built with [nxdk](https://github.com/XboxDev/nxdk), the community-maintained open-source development kit for the original Xbox, and its [SDL2 port](https://github.com/XboxDev/nxdk-sdl). The SDK’s [SDL graphics sample](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/samples/sdl) and [controller sample](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/samples/sdl_gamecontroller) informed the platform setup. [extract-xiso](https://github.com/XboxDev/extract-xiso) packages the disc image through nxdk.
 
-Next: verify controller input, movement/firing/bonks/restart and level completion in xemu, then improve resemblance to the HTML5 game incrementally. Add GDB only when a concrete issue warrants it; XBDM and a test server are unnecessary for this milestone.
+The game uses nxdk rather than Microsoft’s proprietary Xbox Development Kit. Dependencies remain separate from this game repository and retain their own copyrights and licenses; see [nxdk’s license notices](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/LICENSES) and the pinned submodule licenses. No license for this game's original source is granted at present.
 
-Local installation changes are recorded in [setup notes](docs/setup-notes.md).
-
-References: [nxdk](https://github.com/XboxDev/nxdk), [SDL graphics sample](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/samples/sdl), [controller sample](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/samples/sdl_gamecontroller), [xemu CLI](https://xemu.app/docs/cli/).
-
-## Verified emulator setup
-
-The firmware blocker was resolved with an existing `C:\Cerbios.bin` from the user’s physical Xbox (SHA-256 `c5e9d940faf66692b56a16f7a7d779445c1c6d9191d7e7e31c1c1e8168da0733`), [Fancy Mouse Boot ROM 0.9.0](https://github.com/SnowyMouse/fancy-mouse-boot-rom/releases/tag/0.9.0) `mouse_rev1.bin`, and [xemu HDD image 1.0](https://github.com/xemu-project/xemu-hdd-image/releases/tag/1.0). This particular combination was verified by booting the game; compatibility with other BIOS versions is not implied. No physical Xbox files were modified.
-
-Local system files are kept outside Git under the user’s application-support folder. To repeat this setup on the configured Mac:
-
-```sh
-SYSTEM_FILES="$HOME/Library/Application Support/AshleyFighterJet/system"
-./scripts/run-xemu.py --bootrom "$SYSTEM_FILES/mouse_rev1.bin" \
-  --bios "$SYSTEM_FILES/Cerbios.bin" --hdd "$SYSTEM_FILES/xbox_hdd.qcow2"
-```
-
-The emulator uses its own generated EEPROM; the Xbox’s personal EEPROM and HDD key were not copied. The existing Complex file was labeled BFM and was not used for emulator startup.
-
-## Physical Xbox deployment
-
-The compiled prototype was uploaded to a new `F:\Homebrew\Ashleys Fighter Jet\default.xbe` folder on the user's Xbox on 2026-10-04. FTP readback matched the local build's SHA-256 (`186b6886bb6fb39d75706cd003fa71b94f67ae133310a5d81c5a15141223c85c`). No existing games were overwritten. Physical-console gameplay was subsequently observed and recorded through ESP-KVM; the GIF above shows that session, although the capture itself does not identify the running binary's hash. Refresh the dashboard's Homebrew listing or use its file manager to launch that XBE directly. The local deployment receipt is in ignored `build/xbox-deployment.json`; credentials are not saved.
-
-## Attribution and third-party software
-
-This is an independent homebrew game for the original Xbox, based on our family's HTML5 game linked above. It is built using [nxdk](https://github.com/XboxDev/nxdk), the community-maintained open-source development kit, with its Xbox [SDL2 port](https://github.com/XboxDev/nxdk-sdl). Development uses nxdk rather than Microsoft's proprietary Xbox Development Kit. nxdk is a separate, pinned dependency, not a fork or part of this game's source repository.
-
-[xemu](https://github.com/xemu-project/xemu) is used for emulator testing, and [extract-xiso](https://github.com/XboxDev/extract-xiso) packages the disc image through nxdk. The SDL graphics and controller samples linked above informed the platform setup. The open-source [Fancy Mouse Boot ROM](https://github.com/SnowyMouse/fancy-mouse-boot-rom) and [xemu HDD image project](https://github.com/xemu-project/xemu-hdd-image) are references for the tested emulator configuration.
-
-Each third-party project retains its own copyright and license terms; describing nxdk as open source does not imply that every bundled component has the same license. Consult [nxdk's license notices](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/LICENSES) and the licenses in its pinned submodules before distributing compiled builds. No third-party licensing rights are granted by this repository. No license for this game's original source is granted at present.
-
-BIOS dumps, proprietary boot ROMs, console EEPROMs, disk images, saves, credentials, and local emulator settings are excluded from Git. Obtain any required proprietary files separately with appropriate rights. No Raptor code, artwork, music, names, or levels are included. Xbox is a Microsoft trademark; this independent project is not affiliated with or endorsed by Microsoft or the referenced tool projects.
-
-## Two-player iteration (2026-10-04)
-
-Added automatic one/two-controller selection, a pink second jet, shared waves, individual health/ammo/scores, and a score comparison at the end. The 24-enemy level, movement speed, fire rate, collision rules and scoring amounts are unchanged. Host sanitizer tests cover both solo and cooperative gameplay. Host SDL virtual-controller tests verify P2 Start, independent movement/firing, ignoring a third controller, disconnect/reconnect, and preserving bullet ownership when the remaining pilot becomes P1. Both host and Xbox builds compile. These host tests do not establish two-controller behavior on a physical Xbox or inside xemu; that validation is still needed for this iteration.
+Xbox is a Microsoft trademark. This independent homebrew project is not affiliated with or endorsed by Microsoft.
