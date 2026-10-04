@@ -74,3 +74,7 @@ SYSTEM_FILES="$HOME/Library/Application Support/AshleyFighterJet/system"
 ```
 
 The emulator uses its own generated EEPROM; the Xbox’s personal EEPROM and HDD key were not copied. The existing Complex file was labeled BFM and was not used for emulator startup.
+
+## Physical Xbox deployment
+
+The compiled prototype was uploaded to a new `F:\Homebrew\Ashleys Fighter Jet\default.xbe` folder on the user's Xbox on 2026-10-04. FTP readback matched the local build's SHA-256 (`186b6886bb6fb39d75706cd003fa71b94f67ae133310a5d81c5a15141223c85c`). No existing games were overwritten. Physical-console launch and gameplay remain unverified. Refresh the dashboard's Homebrew listing or use its file manager to launch that XBE directly. The local deployment receipt is in ignored `build/xbox-deployment.json`; credentials are not saved.
