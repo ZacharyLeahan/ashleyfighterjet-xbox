@@ -2,9 +2,9 @@
 
 A small C adaptation of the HTML5 game made with Ashley. Fly a blue jet through scrolling stars, dodge friendly-looking colorful UFOs, and shoot. Start with 10 bullets; dodging earns one bullet and one point, shooting an alien earns three points. Survive 24 aliens to win (about 32 seconds). Three bonks end the run; Start restarts.
 
-![Ashley's Fighter Jet gameplay captured from a physical original Xbox](docs/media/xbox-gameplay.gif)
+![Ashley's Fighter Jet gameplay captured from a physical original Xbox](docs/media/xbox-gameplay-20261004-0932.gif)
 
-About eight seconds of real Xbox gameplay from our latest microSD recording, captured on 2026-10-04 through our [ESP-KVM fork](https://github.com/ZacharyLeahan/espkvm). The 480p recording delivered about 26.5 fps; this GIF is 25 fps. These are capture rates, not measurements of the game's rendering frame rate.
+Seven seconds of real Xbox gameplay from microSD recording `up-000932.ts`, captured on 2026-10-04 through our [ESP-KVM fork](https://github.com/ZacharyLeahan/espkvm). The full 480p recording delivered about 27 fps; this GIF is 25 fps. These are capture rates, not measurements of the game's rendering frame rate.
 
 The HTML5 reference is [Ashley’s Fighter Jet](https://github.com/ZacharyLeahan/ashleyfighterjet), commit `4ad80b38d9d38fecd79c5dcf823747032a3677a9`. Its title, blue delta jet, navy sky, yellow/orange accents, green UFO pilots, and ammo mechanic guide this adaptation. The Xbox adaptation has its own repository and build history; the HTML5 source remains in its original repository. This prototype has no Raptor assets or code.
 
