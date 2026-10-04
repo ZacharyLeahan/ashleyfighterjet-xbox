@@ -1,6 +1,6 @@
 # Ashley's Fighter Jet — Xbox prototype
 
-A small C adaptation of the HTML5 game made with Ashley. Fly a blue jet through scrolling stars, dodge friendly-looking colorful UFOs, and shoot. Start with 10 bullets; dodging earns one bullet and one point, shooting an alien earns three points. Survive 24 aliens to win (about 32 seconds). Three bonks end the run; Start restarts.
+A small C adaptation of the HTML5 game made with Ashley. Fly a blue jet through scrolling stars, dodge friendly-looking colorful UFOs, and shoot. Start with 10 bullets; dodging earns one bullet and one point, shooting an alien earns three points. Survive 24 aliens to win (about 32 seconds). Each pilot has three health; Start restarts. With two connected controllers, two jets share the same level.
 
 ![Ashley's Fighter Jet gameplay captured from a physical original Xbox](docs/media/xbox-gameplay-20261004-0148.gif)
 
@@ -34,6 +34,8 @@ Supply your own MCPX and BIOS files. The BIOS must support unsigned homebrew; an
 
 The launcher uses documented `-config_path`, `-dvd_path`, and `-snapshot` options. It creates a dedicated config, EEPROM, and log under `~/Library/Application Support/AshleyFighterJet/xemu-test`; HDD writes are discarded on exit. It explicitly selects **64 MB**. Your normal xemu config is not used. Use a dedicated test HDD. `--check` validates input files without launching; it does not verify firmware suitability or boot. Environment alternatives: `XBOX_MCPX`, `XBOX_BIOS`, `XBOX_HDD`.
 
+Connect one controller for single-player or two for cooperative play; only the first two supported controllers are used. Controller connection changes take effect during play. P1 is blue and P2 is pink. Jets overlap without colliding. Each pilot has separate health, ammo and score: a kill earns its shooter three points, and each surviving connected pilot earns one point and one bullet when an alien passes. A knocked-out pilot waits until restart while the teammate continues; the run ends when all connected pilots are knocked out. The result screen compares both scores. Unplugging/reconnecting preserves pilot stats within the run; unplugging P1 promotes the remaining controller and its pilot to P1. Either pilot can start/restart the shared run.
+
 Xbox controls: **Start** to begin/restart, **left stick or D-pad** to move, **A** to shoot. Bind a controller in xemu's Input settings. xemu's keyboard controller can be selected there; its default Start is Return and A is the A key. No controller-injection API is assumed.
 
 ## Mac preview
@@ -43,7 +45,7 @@ brew install sdl2
 ./scripts/preview.sh
 ```
 
-The same gameplay/rendering code runs on macOS: Return starts/restarts, arrows steer, Space fires; SDL controllers also work. This is a convenient preview, not Xbox validation.
+The same gameplay/rendering code runs on macOS: Return starts/restarts, arrows steer, Space fires; SDL controllers also work. This is a convenient preview, not Xbox validation. For controller integration tests with SDL virtual devices, run `./scripts/test-controllers.sh` (requires host SDL2). The keyboard controls P1; a second jet requires a second supported controller.
 
 ## Pinned dependencies and validation
 
@@ -92,3 +94,7 @@ This is an independent homebrew game for the original Xbox, based on our family'
 Each third-party project retains its own copyright and license terms; describing nxdk as open source does not imply that every bundled component has the same license. Consult [nxdk's license notices](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/LICENSES) and the licenses in its pinned submodules before distributing compiled builds. No third-party licensing rights are granted by this repository. No license for this game's original source is granted at present.
 
 BIOS dumps, proprietary boot ROMs, console EEPROMs, disk images, saves, credentials, and local emulator settings are excluded from Git. Obtain any required proprietary files separately with appropriate rights. No Raptor code, artwork, music, names, or levels are included. Xbox is a Microsoft trademark; this independent project is not affiliated with or endorsed by Microsoft or the referenced tool projects.
+
+## Two-player iteration (2026-10-04)
+
+Added automatic one/two-controller selection, a pink second jet, shared waves, individual health/ammo/scores, and a score comparison at the end. The 24-enemy level, movement speed, fire rate, collision rules and scoring amounts are unchanged. Host sanitizer tests cover both solo and cooperative gameplay. Host SDL virtual-controller tests verify P2 Start, independent movement/firing, ignoring a third controller, disconnect/reconnect, and preserving bullet ownership when the remaining pilot becomes P1. Both host and Xbox builds compile. These host tests do not establish two-controller behavior on a physical Xbox or inside xemu; that validation is still needed for this iteration.

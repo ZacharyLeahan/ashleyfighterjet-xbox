@@ -7,54 +7,80 @@ int circles_hit(float ax, float ay, float ar, float bx, float by, float br) {
     return dx*dx + dy*dy <= r*r;
 }
 void game_init(Game *g) {
-    memset(g, 0, sizeof(*g)); g->state = MENU;
-    g->x = 320; g->y = 380; g->health = 3; g->ammo = 10;
+    memset(g, 0, sizeof(*g)); g->state = MENU; g->player_count = 1;
+    for (int i=0; i<MAX_PLAYERS; ++i)
+        g->players[i] = (Player){.x=i?420:320, .y=380, .health=3, .ammo=10};
 }
-void game_step(Game *g, Input in, float dt) {
-    int pressed = in.start && !g->start_held;
-    g->start_held = in.start;
+void game_set_players(Game *g, int count) {
+    /* Hotplug preserves each player's health, ammo and score within a run. */
+    g->player_count = count >= 2 ? 2 : 1;
+}
+void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
+    int start = 0;
+    for (int i=0; i<g->player_count; ++i) start |= inputs[i].start;
+    int pressed = start && !g->start_held;
+    g->start_held = start;
     if (g->state != PLAYING) {
-        if (pressed) { game_init(g); g->state = PLAYING; g->start_held = 1; }
+        if (pressed) {
+            int count = g->player_count;
+            game_init(g); game_set_players(g,count);
+            if (count==2) g->players[0].x=220;
+            g->state = PLAYING; g->start_held = 1;
+        }
         return;
     }
     dt = clamp(dt, 0, 0.05f);
-    float ix = clamp(in.x,-1,1), iy = clamp(in.y,-1,1);
-    float length = sqrtf(ix*ix+iy*iy);
-    if (length > 1) { ix /= length; iy /= length; }
-    g->x = clamp(g->x + ix*260*dt, 48, 592);
-    g->y = clamp(g->y + iy*260*dt, 92, 400);
-    g->elapsed += dt; g->spawn_clock += dt; g->shot_clock -= dt;
-    g->invincible = clamp(g->invincible-dt, 0, 2);
-    if (g->spawned < LEVEL_ENEMIES && g->spawn_clock >= 1.1f) {
-        for (int i=0; i<MAX_ENEMIES; ++i) if (!g->enemies[i].active) {
-            int n = g->spawned++;
-            g->enemies[i] = (Entity){80+(float)((n*173)%480), -24, 1, n%4};
-            g->spawn_clock -= 1.1f; break;
+    g->elapsed += dt; g->spawn_clock += dt;
+    for (int i=0; i<g->player_count; ++i) {
+        Player *p=&g->players[i]; Input in=inputs[i];
+        if (!p->health) continue;
+        float ix=clamp(in.x,-1,1), iy=clamp(in.y,-1,1);
+        float length=sqrtf(ix*ix+iy*iy);
+        if (length>1) { ix/=length; iy/=length; }
+        p->x=clamp(p->x+ix*260*dt,48,592);
+        p->y=clamp(p->y+iy*260*dt,92,400);
+        p->shot_clock-=dt; p->invincible=clamp(p->invincible-dt,0,2);
+        if (in.fire && p->ammo>0 && p->shot_clock<=0) {
+            for (int b=0; b<MAX_BULLETS; ++b) if (!g->bullets[b].active) {
+                g->bullets[b]=(Entity){.x=p->x,.y=p->y-32,.active=1,.owner=i};
+                --p->ammo; p->shot_clock=0.22f; break;
+            }
         }
     }
-    if (in.fire && g->ammo > 0 && g->shot_clock <= 0) {
-        for (int i=0; i<MAX_BULLETS; ++i) if (!g->bullets[i].active) {
-            g->bullets[i] = (Entity){g->x, g->y-32, 1, 0};
-            --g->ammo; g->shot_clock = 0.22f; break;
+    if (g->spawned<LEVEL_ENEMIES && g->spawn_clock>=1.1f) {
+        for (int i=0; i<MAX_ENEMIES; ++i) if (!g->enemies[i].active) {
+            int n=g->spawned++;
+            g->enemies[i]=(Entity){.x=80+(float)((n*173)%480),.y=-24,.active=1,.color=n%4};
+            g->spawn_clock-=1.1f; break;
         }
     }
     for (int b=0; b<MAX_BULLETS; ++b) if (g->bullets[b].active) {
-        Entity *shot = &g->bullets[b]; shot->y -= 430*dt;
-        if (shot->y < -10) shot->active = 0;
+        Entity *shot=&g->bullets[b]; shot->y-=430*dt;
+        if (shot->y<-10) shot->active=0;
         for (int e=0; shot->active && e<MAX_ENEMIES; ++e) {
-            Entity *alien = &g->enemies[e];
+            Entity *alien=&g->enemies[e];
             if (alien->active && circles_hit(shot->x,shot->y,4,alien->x,alien->y,20)) {
-                shot->active = alien->active = 0; g->score += 3; ++g->resolved;
+                shot->active=alien->active=0;
+                g->players[shot->owner].score+=3; ++g->resolved;
             }
         }
     }
     for (int e=0; e<MAX_ENEMIES; ++e) if (g->enemies[e].active) {
-        Entity *alien = &g->enemies[e]; alien->y += 105*dt;
-        if (alien->y > 510) { alien->active = 0; ++g->resolved; ++g->score; ++g->ammo; }
-        else if (g->invincible == 0 && circles_hit(g->x,g->y,13,alien->x,alien->y,20)) {
-            alien->active = 0; ++g->resolved; --g->health; g->invincible = 1.5f;
-            if (!g->health) { g->state = LOST; return; }
+        Entity *alien=&g->enemies[e]; alien->y+=105*dt;
+        if (alien->y>510) {
+            alien->active=0; ++g->resolved;
+            for (int i=0; i<g->player_count; ++i) if (g->players[i].health) {
+                ++g->players[i].score; ++g->players[i].ammo;
+            }
+        } else for (int i=0; i<g->player_count && alien->active; ++i) {
+            Player *p=&g->players[i];
+            if (p->health && p->invincible==0 && circles_hit(p->x,p->y,13,alien->x,alien->y,20)) {
+                alien->active=0; ++g->resolved; --p->health; p->invincible=1.5f;
+            }
         }
     }
-    if (g->resolved == LEVEL_ENEMIES) g->state = WON;
+    int alive=0;
+    for (int i=0; i<g->player_count; ++i) alive |= g->players[i].health>0;
+    if (!alive) g->state=LOST;
+    else if (g->resolved==LEVEL_ENEMIES) g->state=WON;
 }

@@ -34,10 +34,10 @@ static void text(SDL_Renderer *r,int x,int y,const char *s,int scale,unsigned c)
     }
 }
 static void centered(SDL_Renderer *r,int y,const char *s,int scale,unsigned c) { text(r,(640-(int)strlen(s)*6*scale)/2,y,s,scale,c); }
-static void jet(SDL_Renderer *r,int x,int y,float t) {
+static void jet(SDL_Renderer *r,int x,int y,float t,int player) {
     int flame=12+(int)(6*(1+sinf(t*25)));
     ellipse(r,x-8,y+27,4,flame,0xff9d3f); ellipse(r,x+8,y+27,4,flame,0xff9d3f);
-    for(int dy=-10;dy<=26;++dy) { int width=(dy+10)*30/36; box(r,x-width,y+dy,width*2+1,1,0x4f8cff); }
+    for(int dy=-10;dy<=26;++dy) { int width=(dy+10)*30/36; box(r,x-width,y+dy,width*2+1,1,player?0xff799f:0x4f8cff); }
     box(r,x-30,y+22,5,5,0xffe36e); box(r,x+26,y+22,5,5,0xffe36e);
     ellipse(r,x,y,9,31,0xbcd4ff); ellipse(r,x,y-7,5,12,0x174b81);
     box(r,x-2,y-13,2,8,0xa8e8ff);
@@ -54,21 +54,35 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
     for(int i=0;i<100;++i) { int x=24+(i*137)%592; float speed=16+(i%3)*20;
         int y=(int)fmodf(i*79+t*speed,480); box(r,x,y,1+i%2,1+i%2,i%3?0x667aab:0xbcd4ff); }
     for(int i=0;i<MAX_ENEMIES;++i)if(g->enemies[i].active)alien(r,(int)g->enemies[i].x,(int)g->enemies[i].y,g->enemies[i].color,t);
-    for(int i=0;i<MAX_BULLETS;++i)if(g->bullets[i].active) { Entity b=g->bullets[i]; ellipse(r,(int)b.x,(int)b.y,3,8,0xffe36e); }
-    if(g->invincible<=0||(int)(t*12)%2)jet(r,(int)g->x,(int)g->y,t);
+    for(int i=0;i<MAX_BULLETS;++i)if(g->bullets[i].active) { Entity b=g->bullets[i]; ellipse(r,(int)b.x,(int)b.y,3,8,b.owner?0xff799f:0xffe36e); }
+    for(int i=0;i<g->player_count;++i) {
+        const Player *p=&g->players[i];
+        if(p->health&&(p->invincible<=0||(int)(t*12)%2))jet(r,(int)p->x,(int)p->y,t,i);
+    }
     if(g->state==PLAYING) {
-        char hud[64]; snprintf(hud,sizeof(hud),"AMMO %d   SCORE %d   HEALTH %d",g->ammo,g->score,g->health);
-        centered(r,26,hud,2,0xffe36e);
-        box(r,48,52,544,3,0x253058); box(r,48,52,544*g->resolved/LEVEL_ENEMIES,3,0x57e89c);
+        for(int i=0;i<g->player_count;++i) {
+            const Player *p=&g->players[i]; char hud[64];
+            snprintf(hud,sizeof(hud),"P%d AMMO %d SCORE %d HEALTH %d",i+1,p->ammo,p->score,p->health);
+            centered(r,18+i*20,hud,2,i?0xff799f:0xbcd4ff);
+        }
+        box(r,48,62,544,3,0x253058); box(r,48,62,544*g->resolved/LEVEL_ENEMIES,3,0x57e89c);
         centered(r,438,"DODGE ALIENS TO EARN BULLETS",2,0xbcd4ff);
     } else {
         box(r,45,115,550,223,0x111535);
         if(g->state==MENU) {
             centered(r,140,"ASHLEY'S",4,0xffe36e); centered(r,178,"FIGHTER JET",4,0xff9d3f);
-            centered(r,232,"DODGE THE SILLY ALIENS!",2,0xbcd4ff);
+            centered(r,232,g->player_count==2?"TWO PILOTS - ONE ADVENTURE!":"DODGE THE SILLY ALIENS!",2,0xbcd4ff);
         } else {
             centered(r,148,g->state==WON?"YOU WIN!":"OOF! YOU GOT BONKED!",g->state==WON?4:3,g->state==WON?0x57e89c:0xff5e8a);
-            char score[40]; snprintf(score,sizeof(score),"SCORE %d",g->score); centered(r,206,score,3,0xffe36e);
+            char score[64];
+            if(g->player_count==2) {
+                snprintf(score,sizeof(score),"P1 SCORE %d - P2 SCORE %d",g->players[0].score,g->players[1].score);
+                centered(r,204,score,2,0xffe36e);
+                int a=g->players[0].score,b=g->players[1].score;
+                centered(r,238,a==b?"TIED SCORE!":a>b?"P1 TOP SCORE!":"P2 TOP SCORE!",2,0xffffff);
+            } else {
+                snprintf(score,sizeof(score),"SCORE %d",g->players[0].score); centered(r,206,score,3,0xffe36e);
+            }
         }
         centered(r,276,"PRESS START TO FLY",2,0xffffff);
         centered(r,308,"LEFT STICK TO STEER - A TO SHOOT",2,0xbcd4ff);
