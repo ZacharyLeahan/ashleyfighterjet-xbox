@@ -2,6 +2,10 @@
 
 A small C adaptation of the HTML5 game made with Ashley. Fly a blue jet through scrolling stars, dodge friendly-looking colorful UFOs, and shoot. Start with 10 bullets; dodging earns one bullet and one point, shooting an alien earns three points. Survive 24 aliens to win (about 32 seconds). Three bonks end the run; Start restarts.
 
+![Ashley's Fighter Jet gameplay captured from a physical original Xbox](docs/media/xbox-gameplay.gif)
+
+Eight seconds of real Xbox gameplay, captured on 2026-10-04 through our [ESP-KVM fork](https://github.com/ZacharyLeahan/espkvm). The 480p recording delivered about 28 fps; this GIF is 25 fps. These are capture rates, not measurements of the game's rendering frame rate.
+
 The HTML5 reference is [Ashley’s Fighter Jet](https://github.com/ZacharyLeahan/ashleyfighterjet), commit `4ad80b38d9d38fecd79c5dcf823747032a3677a9`. Its title, blue delta jet, navy sky, yellow/orange accents, green UFO pilots, and ammo mechanic guide this adaptation. The Xbox adaptation has its own repository and build history; the HTML5 source remains in its original repository. This prototype has no Raptor assets or code.
 
 ## Setup and build on macOS
@@ -51,7 +55,7 @@ The same gameplay/rendering code runs on macOS: Return starts/restarts, arrows s
 - Host preview: SDL2 compatibility 2.32.74.
 - Development machine: M2 MacBook Air, 24 GB RAM, macOS 26.7.
 
-**Compiled:** minimal SDL program and playable prototype, XBE and XISO generated. **Host tests:** collisions, movement bounds, firing cooldown, dodge rewards, damage/invulnerability, loss, all 24 waves, completion, and restart pass with AddressSanitizer/UndefinedBehaviorSanitizer. **Mac visual check:** title, gameplay, UFOs, game over, restart, and shooting consuming ammo verified. **xemu boot:** verified on 2026-10-04; title screen visibly running at 64 MB using the Xbox’s existing CerBIOS plus Fancy Mouse 0.9.0 `mouse_rev1.bin` and the official HDD image. **xemu gameplay/controller validation:** pending. **Physical Xbox:** untested.
+**Compiled:** minimal SDL program and playable prototype, XBE and XISO generated. **Host tests:** collisions, movement bounds, firing cooldown, dodge rewards, damage/invulnerability, loss, all 24 waves, completion, and restart pass with AddressSanitizer/UndefinedBehaviorSanitizer. **Mac visual check:** title, gameplay, UFOs, game over, restart, and shooting consuming ammo verified. **xemu boot:** verified on 2026-10-04; title screen visibly running at 64 MB using the Xbox’s existing CerBIOS plus Fancy Mouse 0.9.0 `mouse_rev1.bin` and the official HDD image. **xemu gameplay/controller validation:** pending. **Physical Xbox:** gameplay, movement, shooting, and a win screen observed in HDMI capture on 2026-10-04; full regression testing remains pending.
 
 Known limitations: simple placeholder graphics, one enemy type, deterministic waves, no sound, pickups, boss, shop, persistence, or upgrades. This is an early adaptation, not the complete HTML5 game. nxdk emits library/linker warnings; the game sources compile without warnings. Performance and controller behavior on Xbox still need testing. Emulator results will not establish physical Xbox compatibility. The separate ESP-KVM project is untouched.
 
@@ -77,7 +81,7 @@ The emulator uses its own generated EEPROM; the Xbox’s personal EEPROM and HDD
 
 ## Physical Xbox deployment
 
-The compiled prototype was uploaded to a new `F:\Homebrew\Ashleys Fighter Jet\default.xbe` folder on the user's Xbox on 2026-10-04. FTP readback matched the local build's SHA-256 (`186b6886bb6fb39d75706cd003fa71b94f67ae133310a5d81c5a15141223c85c`). No existing games were overwritten. Physical-console launch and gameplay remain unverified. Refresh the dashboard's Homebrew listing or use its file manager to launch that XBE directly. The local deployment receipt is in ignored `build/xbox-deployment.json`; credentials are not saved.
+The compiled prototype was uploaded to a new `F:\Homebrew\Ashleys Fighter Jet\default.xbe` folder on the user's Xbox on 2026-10-04. FTP readback matched the local build's SHA-256 (`186b6886bb6fb39d75706cd003fa71b94f67ae133310a5d81c5a15141223c85c`). No existing games were overwritten. Physical-console gameplay was subsequently observed and recorded through ESP-KVM; the GIF above shows that session, although the capture itself does not identify the running binary's hash. Refresh the dashboard's Homebrew listing or use its file manager to launch that XBE directly. The local deployment receipt is in ignored `build/xbox-deployment.json`; credentials are not saved.
 
 ## Attribution and third-party software
 
