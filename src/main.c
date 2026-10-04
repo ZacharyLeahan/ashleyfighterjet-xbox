@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include "game.h"
 #include "render.h"
+#include "audio.h"
 #ifndef HOST_BUILD
 #include <hal/video.h>
 #include <hal/debug.h>
@@ -20,6 +21,7 @@ int main(void) {
     SDL_Renderer *r=w?SDL_CreateRenderer(w,-1,0):NULL;
     if(!r)goto fail;
     SDL_RenderSetLogicalSize(r,640,480);
+    if(!audio_init())SDL_Log("Audio unavailable: %s",SDL_GetError());
     SDL_GameController *pads[MAX_PLAYERS]={0};
     Game g; game_init(&g);
     Uint32 previous=SDL_GetTicks(); float accumulator=0,time=0;
@@ -72,6 +74,7 @@ int main(void) {
             in[i].x+=SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_DPAD_RIGHT)-SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_DPAD_LEFT);
             in[i].y+=SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_DPAD_DOWN)-SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_DPAD_UP);
             in[i].fire|=SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_A);
+            in[i].fire|=SDL_GameControllerGetAxis(pads[i],SDL_CONTROLLER_AXIS_TRIGGERRIGHT)>8192;
             in[i].start|=SDL_GameControllerGetButton(pads[i],SDL_CONTROLLER_BUTTON_START);
         }
         Uint32 now=SDL_GetTicks(); float elapsed=(now-previous)/1000.0f;previous=now;
@@ -83,11 +86,14 @@ int main(void) {
                 step[i].start|=pending_start[i]; step[i].fire|=pending_fire[i];
                 pending_start[i]=pending_fire[i]=0;
             }
-            game_step(&g,step,1.0f/60); accumulator-=1.0f/60;
+            game_step(&g,step,1.0f/60);
+            for(int i=0;i<g.sound_count;++i)audio_play(g.sounds[i]);
+            accumulator-=1.0f/60;
         }
         draw_game(r,&g,time);SDL_Delay(1);
     }
     for(int i=0;i<MAX_PLAYERS;++i)if(pads[i])SDL_GameControllerClose(pads[i]);
+    audio_close();
     SDL_DestroyRenderer(r);SDL_DestroyWindow(w);SDL_Quit();return 0;
 fail:
 #ifndef HOST_BUILD

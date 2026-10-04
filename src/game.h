@@ -8,7 +8,12 @@
 #define LEVEL_ENEMIES 24
 #define BOSS_HEALTH 16
 #define MAX_BOSS_SHOTS 32
-typedef enum { MENU, PLAYING, WON, LOST } GameState;
+typedef enum { MENU, PLAYING, DYING, WON, LOST } GameState;
+typedef enum {
+    SOUND_SHOOT, SOUND_POP, SOUND_EMPTY, SOUND_ALARM, SOUND_BOSS_SHOOT,
+    SOUND_BOSS_HIT, SOUND_BOSS_DIE, SOUND_WIN, SOUND_CRASH, SOUND_COUNT
+} SoundEvent;
+#define MAX_SOUND_EVENTS 32
 typedef struct { float x, y; int active, color, owner; } Entity;
 typedef struct { float x, y; int fire, start; float roll_x, roll_y; } Input;
 typedef struct {
@@ -19,11 +24,13 @@ typedef struct {
 } Player;
 typedef struct { float x,y,vx,vy; int active; } BossShot;
 typedef struct {
-    float x,y,time,flash,fire_clock;
+    float x,y,time,flash,fire_clock,death_time,fall_speed;
     int active,entering,health,volleys;
 } Boss;
 typedef struct {
     GameState state;
+    SoundEvent sounds[MAX_SOUND_EVENTS];
+    int sound_count;
     float elapsed, spawn_clock;
     int player_count, spawned, resolved, start_held;
     Player players[MAX_PLAYERS];

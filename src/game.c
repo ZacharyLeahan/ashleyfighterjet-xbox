@@ -1,6 +1,10 @@
 #include "game.h"
 #include <math.h>
 #include <string.h>
+static void sound_event(Game *g,SoundEvent event) {
+    if(g->sound_count<MAX_SOUND_EVENTS)g->sounds[g->sound_count++]=event;
+    else g->sounds[MAX_SOUND_EVENTS-1]=event;
+}
 static float clamp(float v, float a, float b) { return v < a ? a : v > b ? b : v; }
 int circles_hit(float ax, float ay, float ar, float bx, float by, float br) {
     float dx = ax-bx, dy = ay-by, r = ar+br;
@@ -39,6 +43,7 @@ static void boss_step(Game *g,float dt) {
                     .vx=cosf(angle)*310,.vy=sinf(angle)*310,.active=1};
                 break;
             }
+            sound_event(g,SOUND_BOSS_SHOOT);
             boss->fire_clock=fmaxf(0.48f,1.45f-(BOSS_HEALTH-boss->health)*0.035f);
         }
     }
@@ -54,6 +59,7 @@ static void boss_step(Game *g,float dt) {
             Player *p=&g->players[i];
             if(p->health&&p->invincible==0&&circles_hit(p->x,p->y,13,shot->x,shot->y,7)) {
                 --p->health;p->invincible=1.5f;shot->active=0;
+                sound_event(g,SOUND_CRASH);
             }
         }
     }
@@ -61,10 +67,23 @@ static void boss_step(Game *g,float dt) {
         Player *p=&g->players[i];
         if(p->health&&p->invincible==0&&circles_hit(p->x,p->y,13,boss->x,boss->y,59)) {
             --p->health;p->invincible=1.5f;
+            sound_event(g,SOUND_CRASH);
         }
     }
 }
 void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
+    g->sound_count=0;
+    if(g->state==DYING) {
+        dt=clamp(dt,0,0.05f);
+        g->boss.time+=dt;g->boss.death_time+=dt;
+        g->boss.flash=fmaxf(0,g->boss.flash-dt);
+        g->boss.fall_speed+=360*dt;g->boss.y+=g->boss.fall_speed*dt;
+        g->boss.x+=sinf(g->boss.death_time*7)*60*dt;
+        if(g->boss.y>GAME_HGT+110) {
+            g->boss.active=0;g->state=WON;sound_event(g,SOUND_WIN);
+        }
+        return;
+    }
     int start = 0;
     for (int i=0; i<g->player_count; ++i) start |= inputs[i].start;
     int pressed = start && !g->start_held;
@@ -108,10 +127,13 @@ void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
         p->x=clamp(p->x+ix*260*dt,48,592);
         p->y=clamp(p->y+iy*260*dt,92,400);
         p->shot_clock-=dt; p->invincible=clamp(p->invincible-dt,0,2);
+        if (in.fire && p->ammo==0 && p->shot_clock<=0) {
+            sound_event(g,SOUND_EMPTY);p->shot_clock=0.22f;
+        }
         if (in.fire && p->ammo>0 && p->shot_clock<=0) {
             for (int b=0; b<MAX_BULLETS; ++b) if (!g->bullets[b].active) {
                 g->bullets[b]=(Entity){.x=p->x,.y=p->y-32,.active=1,.owner=i};
-                --p->ammo; p->shot_clock=0.22f; break;
+                --p->ammo; p->shot_clock=0.22f; sound_event(g,SOUND_SHOOT); break;
             }
         }
     }
@@ -129,6 +151,7 @@ void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
         if (shot->active && g->boss.active && g->boss.health>0 &&
             circles_hit(shot->x,shot->y,4,g->boss.x,g->boss.y,59)) {
             shot->active=0;--g->boss.health;g->boss.flash=0.12f;
+            sound_event(g,SOUND_BOSS_HIT);
             ++g->players[shot->owner].score;
             if (!g->boss.health) g->players[shot->owner].score+=10;
         }
@@ -137,6 +160,7 @@ void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
             if (alien->active && circles_hit(shot->x,shot->y,4,alien->x,alien->y,20)) {
                 shot->active=alien->active=0;
                 g->players[shot->owner].score+=3; ++g->resolved;
+                sound_event(g,SOUND_POP);
             }
         }
     }
@@ -151,6 +175,7 @@ void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
             Player *p=&g->players[i];
             if (p->health && p->invincible==0 && circles_hit(p->x,p->y,13,alien->x,alien->y,20)) {
                 alien->active=0; ++g->resolved; --p->health; p->invincible=1.5f;
+                sound_event(g,SOUND_CRASH);
             }
         }
     }
@@ -158,10 +183,14 @@ void game_step(Game *g, const Input inputs[MAX_PLAYERS], float dt) {
     for (int i=0; i<g->player_count; ++i) alive |= g->players[i].health>0;
     if (!alive) g->state=LOST;
     else if (g->boss.active && g->boss.health<=0) {
-        g->boss.active=0;memset(g->boss_shots,0,sizeof(g->boss_shots));g->state=WON;
+        memset(g->boss_shots,0,sizeof(g->boss_shots));
+        memset(g->bullets,0,sizeof(g->bullets));
+        g->boss.death_time=0;g->boss.fall_speed=100;g->state=DYING;
+        sound_event(g,SOUND_BOSS_DIE);
     } else if (g->resolved==LEVEL_ENEMIES && !g->boss.active) {
         g->boss=(Boss){.x=320,.y=-144,.active=1,.entering=1,
                       .health=BOSS_HEALTH,.fire_clock=1.45f};
+        sound_event(g,SOUND_ALARM);
         memset(g->bullets,0,sizeof(g->bullets));
         for(int i=0;i<g->player_count;++i)if(g->players[i].health)
             if(g->players[i].ammo<24)g->players[i].ammo=24;

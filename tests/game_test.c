@@ -1,6 +1,10 @@
 #include "game.h"
 #include <assert.h>
 #include <stdio.h>
+static int heard(const Game *g,SoundEvent sound) {
+    for(int i=0;i<g->sound_count;++i)if(g->sounds[i]==sound)return 1;
+    return 0;
+}
 static void step(Game *g, Input in, float dt) { Input inputs[MAX_PLAYERS]={in,{0}};game_step(g,inputs,dt); }
 static void start(Game *g) { game_init(g);step(g,(Input){.start=1},1.0f/60);step(g,(Input){0},1.0f/60); }
 int main(void) {
@@ -8,14 +12,17 @@ int main(void) {
     Game g;start(&g);assert(g.state==PLAYING&&g.players[0].ammo==10&&g.players[0].health==3);
     for(int i=0;i<1000;++i)step(&g,(Input){.x=1,.y=1},1.0f/60);
     assert(g.players[0].x<=592&&g.players[0].y<=400);
-    start(&g);step(&g,(Input){.fire=1},1.0f/60);assert(g.players[0].ammo==9);
-    step(&g,(Input){.fire=1},1.0f/60);assert(g.players[0].ammo==9);
+    start(&g);step(&g,(Input){.fire=1},1.0f/60);assert(g.players[0].ammo==9&&heard(&g,SOUND_SHOOT));
+    step(&g,(Input){.fire=1},1.0f/60);assert(g.players[0].ammo==9&&!heard(&g,SOUND_SHOOT));
+    start(&g);g.players[0].ammo=0;
+    step(&g,(Input){.fire=1},1.0f/60);assert(heard(&g,SOUND_EMPTY));
+    step(&g,(Input){.fire=1},1.0f/60);assert(g.sound_count==0);
     start(&g);g.enemies[0]=(Entity){.x=100,.y=509,.active=1};g.spawned=1;
     step(&g,(Input){0},1.0f/60);assert(g.players[0].score==1&&g.players[0].ammo==11&&g.resolved==1);
     start(&g);g.enemies[0]=(Entity){.x=200,.y=100,.active=1};g.bullets[0]=(Entity){.x=200,.y=107,.active=1};g.spawned=1;
-    step(&g,(Input){0},1.0f/60);assert(g.players[0].score==3&&g.resolved==1&&!g.bullets[0].active);
+    step(&g,(Input){0},1.0f/60);assert(g.players[0].score==3&&g.resolved==1&&!g.bullets[0].active&&heard(&g,SOUND_POP));
     start(&g);g.enemies[0]=(Entity){.x=g.players[0].x,.y=g.players[0].y,.active=1};g.spawned=1;
-    step(&g,(Input){0},1.0f/60);assert(g.players[0].health==2&&g.players[0].invincible>0);
+    step(&g,(Input){0},1.0f/60);assert(g.players[0].health==2&&g.players[0].invincible>0&&heard(&g,SOUND_CRASH));
     g.enemies[1]=(Entity){.x=g.players[0].x,.y=g.players[0].y,.active=1};step(&g,(Input){0},1.0f/60);assert(g.players[0].health==2);
     start(&g);g.players[0].health=1;g.enemies[0]=(Entity){.x=g.players[0].x,.y=g.players[0].y,.active=1};step(&g,(Input){0},1.0f/60);assert(g.state==LOST);
     step(&g,(Input){.start=1},1.0f/60);assert(g.state==PLAYING&&g.players[0].health==3);
@@ -23,7 +30,9 @@ int main(void) {
     start(&g);g.players[0].x=592;g.players[0].y=92;
     for(int i=0;i<2400&&g.state==PLAYING&&!g.boss.active;++i)step(&g,(Input){0},1.0f/60);
     assert(g.state==PLAYING&&g.boss.active&&g.boss.health==16&&g.spawned==24&&g.resolved==24&&g.players[0].score==24&&g.players[0].ammo==34);
-    g.boss.health=0;step(&g,(Input){0},1.0f/60);assert(g.state==WON);
+    g.boss.health=0;step(&g,(Input){0},1.0f/60);assert(g.state==DYING);
+    for(int i=0;i<180&&g.state==DYING;++i)step(&g,(Input){0},1.0f/60);
+    assert(g.state==WON);
     step(&g,(Input){.start=1},1.0f/60);assert(g.state==PLAYING&&g.players[0].score==0);
     /* Four directional dodges work without ammo and preserve bounds. */
     for(int direction=0;direction<4;++direction) {
@@ -94,6 +103,7 @@ int main(void) {
     start(&g);game_set_players(&g,2);g.resolved=LEVEL_ENEMIES;g.spawned=LEVEL_ENEMIES;
     g.players[0].ammo=0;g.players[1].ammo=30;g.players[0].score=7;
     step(&g,(Input){0},1.0f/60);
+    assert(heard(&g,SOUND_ALARM));
     assert(g.boss.active&&g.boss.entering&&g.players[0].ammo==24&&g.players[1].ammo==30&&g.players[0].score==7);
     for(int i=0;i<240&&g.boss.entering;++i)step(&g,(Input){0},1.0f/60);
     assert(!g.boss.entering&&g.boss.volleys==0);
@@ -101,7 +111,7 @@ int main(void) {
     g.boss.health=3;g.boss.fire_clock=0;
     step(&g,(Input){0},1.0f/60);
     int shots=0;for(int i=0;i<MAX_BOSS_SHOTS;++i)shots+=g.boss_shots[i].active;
-    assert(shots==3&&g.boss.volleys==1);
+    assert(shots==3&&g.boss.volleys==1&&heard(&g,SOUND_BOSS_SHOOT));
     /* Dodging replenishes ammo; a hit damages just one pilot. */
     for(int i=0;i<MAX_BOSS_SHOTS;++i)g.boss_shots[i].active=0;
     g.boss_shots[0]=(BossShot){.x=100,.y=509,.vy=310,.active=1};
@@ -114,7 +124,14 @@ int main(void) {
     g.boss.health=1;g.boss_shots[0].active=0;
     g.bullets[0]=(Entity){.x=g.boss.x,.y=g.boss.y+20,.active=1,.owner=1};
     step(&g,(Input){0},1.0f/60);
-    assert(g.state==WON&&!g.boss.active&&g.players[1].score==11);
+    assert(g.state==DYING&&g.boss.active&&g.players[1].score==11);
+    assert(heard(&g,SOUND_BOSS_HIT)&&heard(&g,SOUND_BOSS_DIE)&&!heard(&g,SOUND_WIN));
+    float boss_y=g.boss.y;int volleys=g.boss.volleys,health=g.players[0].health;
+    step(&g,(Input){.start=1,.fire=1},1.0f/60);
+    assert(g.state==DYING&&g.boss.y>boss_y&&g.boss.volleys==volleys&&g.players[0].health==health);
+    for(int i=0;i<180&&g.state==DYING;++i)step(&g,(Input){0},1.0f/60);
+    assert(g.state==WON&&!g.boss.active&&heard(&g,SOUND_WIN));
+    step(&g,(Input){0},1.0f/60);assert(g.sound_count==0);
     step(&g,(Input){.start=1},1.0f/60);
     assert(g.state==PLAYING&&!g.boss.active&&g.boss.health==0);
     /* Boss projectiles can end a run; restarting clears every projectile. */

@@ -17,7 +17,8 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
         assert(g->player_count==2);button(1,SDL_CONTROLLER_BUTTON_START,1);phase=1;
     } else if(phase==1&&g->state==PLAYING) {
         button(1,SDL_CONTROLLER_BUTTON_START,0);
-        button(0,SDL_CONTROLLER_BUTTON_A,1);button(1,SDL_CONTROLLER_BUTTON_A,1);
+        button(0,SDL_CONTROLLER_BUTTON_A,1);
+        assert(SDL_JoystickSetVirtualAxis(sticks[1],SDL_CONTROLLER_AXIS_TRIGGERRIGHT,32767)==0);
         assert(SDL_JoystickSetVirtualAxis(sticks[0],SDL_CONTROLLER_AXIS_LEFTX,-32767)==0);
         assert(SDL_JoystickSetVirtualAxis(sticks[1],SDL_CONTROLLER_AXIS_LEFTX,32767)==0);
         assert(SDL_JoystickSetVirtualAxis(sticks[0],SDL_CONTROLLER_AXIS_RIGHTX,-32767)==0);
@@ -27,7 +28,8 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
         assert(g->players[0].x<220&&g->players[1].x>420);
         assert(g->players[0].roll_clock>0&&g->players[0].roll_x==-1);
         assert(g->players[1].roll_clock>0&&g->players[1].roll_y==-1);
-        button(0,SDL_CONTROLLER_BUTTON_A,0);button(1,SDL_CONTROLLER_BUTTON_A,0);
+        button(0,SDL_CONTROLLER_BUTTON_A,0);
+        assert(SDL_JoystickSetVirtualAxis(sticks[1],SDL_CONTROLLER_AXIS_TRIGGERRIGHT,-32768)==0);
         assert(SDL_JoystickDetachVirtual(devices[2])==0);
         assert(SDL_JoystickDetachVirtual(devices[0])==0);phase=3;
     } else if(phase==3&&g->player_count==1) {
@@ -45,6 +47,7 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
 }
 int main(void) {
     assert(SDL_setenv("SDL_VIDEODRIVER","dummy",1)==0);
+    assert(SDL_setenv("SDL_AUDIODRIVER","dummy",1)==0);
     assert(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_GAMECONTROLLER)==0);
     began=SDL_GetTicks();
     for(int i=0;i<3;++i) {

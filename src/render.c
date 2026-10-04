@@ -43,6 +43,21 @@ static void jet_box(SDL_Renderer *r,int x,int y,float sx,float sy,int dx,int dy,
 static void jet_ellipse(SDL_Renderer *r,int x,int y,float sx,float sy,int dx,int dy,int rx,int ry,unsigned c) {
     ellipse(r,x+(int)(dx*sx),y+(int)(dy*sy),1+(int)(rx*fabsf(sx)),1+(int)(ry*fabsf(sy)),c);
 }
+static void smoke(SDL_Renderer *r,const Player *p,float t,int player) {
+    /* Expanding gray puffs stream from the damaged engine. Draw independently
+     * of the damage blink so the warning stays visible during protection. */
+    for(int i=5;i>=0;--i) {
+        float age=fmodf(t*0.85f+i/6.0f+player*0.37f,1.0f);
+        float fade=(1-age)*0.8f;
+        int x=(int)p->x+12+(int)(sinf(age*5+player)*12*age);
+        int y=(int)p->y+18+(int)(age*62);
+        int radius=4+(int)(age*10);
+        unsigned red=11+(unsigned)(139*fade);
+        unsigned green=11+(unsigned)(143*fade);
+        unsigned blue=42+(unsigned)(123*fade);
+        ellipse(r,x,y,radius,radius*3/4,(red<<16)|(green<<8)|blue);
+    }
+}
 static void jet(SDL_Renderer *r,int x,int y,float t,int player,const Player *p) {
     float sx=1,sy=1;
     if(p->roll_clock>0) {
@@ -65,33 +80,72 @@ static void alien(SDL_Renderer *r,int x,int y,int n,float t) {
     ellipse(r,x,y+2,25,10,colors[n%4]);
     for(int i=0;i<5;++i)ellipse(r,x-18+i*9,y+5,2,2,sinf(t*5+i)>0?0xfff8b8:0xbcd4ff);
 }
-static void blaster(SDL_Renderer *r,const Game *g) {
-    const Boss *b=&g->boss; int x=(int)b->x,y=(int)b->y;
-    int ry=65+(int)(sinf(b->time*3)*3);
-    ellipse(r,x,y,80,80,0x241640);
-    /* Three crown points, a purple jelly body, and tracking googly eyes. */
-    for(int dy=0;dy<23;++dy) {
-        box(r,x-30,y-83+dy,dy/2+1,1,0xffd76e);
-        box(r,x+30-dy/2,y-83+dy,dy/2+1,1,0xffd76e);
-        box(r,x-dy/2,y-89+dy,dy+1,1,0xffd76e);
+typedef struct { int x,y; float c,s; } BossDraw;
+static void boss_line(SDL_Renderer *r,const BossDraw *d,int x1,int y1,int x2,int y2) {
+    int ax=d->x+(int)(x1*d->c-y1*d->s),ay=d->y+(int)(x1*d->s+y1*d->c);
+    int bx=d->x+(int)(x2*d->c-y2*d->s),by=d->y+(int)(x2*d->s+y2*d->c);
+    SDL_RenderDrawLine(r,ax,ay,bx,by);
+    /* Cover raster gaps between rotated scanlines. */
+    if(fabsf(d->s)>0.001f) {
+        SDL_RenderDrawLine(r,ax+1,ay,bx+1,by);
+        SDL_RenderDrawLine(r,ax,ay+1,bx,by+1);
     }
-    box(r,x-30,y-67,61,12,0xffd76e);
-    ellipse(r,x,y,65,ry,b->flash>0?0xffffff:0xb44df0);
-    ellipse(r,x-21,y-28,25,19,0xc976f4);
-    ellipse(r,x-33,y+22,10,10,0xe0b3ff);ellipse(r,x+36,y+11,7,7,0xe0b3ff);
+}
+static void boss_box(SDL_Renderer *r,const BossDraw *d,int x,int y,int w,int h,unsigned c) {
+    color(r,c);for(int row=0;row<h;++row)boss_line(r,d,x,y+row,x+w-1,y+row);
+}
+static void boss_ellipse(SDL_Renderer *r,const BossDraw *d,int x,int y,int rx,int ry,unsigned c) {
+    color(r,c);
+    for(int dy=-ry;dy<=ry;++dy) {
+        int dx=(int)(rx*sqrtf(1-(float)(dy*dy)/(ry*ry)));
+        boss_line(r,d,x-dx,y+dy,x+dx,y+dy);
+    }
+}
+static void boss_smoke(SDL_Renderer *r,const Boss *b) {
+    for(int i=9;i>=0;--i) {
+        float age=fmodf(b->time*.7f+i/10.0f,1);
+        int side=i%2?1:-1;
+        int x=(int)b->x+side*(25+(int)(age*35))+(int)(sinf(age*8+i)*8);
+        int y=(int)b->y-22-(int)(age*80);
+        int size=7+(int)(age*16);
+        float fade=(1-age)*.85f;
+        unsigned red=11+(unsigned)(145*fade),green=11+(unsigned)(145*fade),blue=42+(unsigned)(120*fade);
+        ellipse(r,x,y,size,size*3/4,(red<<16)|(green<<8)|blue);
+    }
+}
+static void blaster(SDL_Renderer *r,const Game *g) {
+    const Boss *b=&g->boss;
+    float angle=g->state==DYING?b->death_time*4:0;
+    BossDraw d={(int)b->x,(int)b->y,cosf(angle),sinf(angle)};
+    int ry=65+(int)(sinf(b->time*3)*3);
+    if(b->health<=3)boss_smoke(r,b);
+    if(g->state!=DYING)ellipse(r,d.x,d.y,80,80,0x241640);
+    for(int dy=0;dy<23;++dy) {
+        boss_box(r,&d,-30,-83+dy,dy/2+1,1,0xffd76e);
+        boss_box(r,&d,30-dy/2,-83+dy,dy/2+1,1,0xffd76e);
+        boss_box(r,&d,-dy/2,-89+dy,dy+1,1,0xffd76e);
+    }
+    boss_box(r,&d,-30,-67,61,12,0xffd76e);
+    boss_ellipse(r,&d,0,0,65,ry,b->flash>0?0xffffff:0xb44df0);
+    boss_ellipse(r,&d,-21,-28,25,19,0xc976f4);
+    boss_ellipse(r,&d,-33,22,10,10,0xe0b3ff);boss_ellipse(r,&d,36,11,7,7,0xe0b3ff);
     int look=(int)((g->players[0].x-b->x)/640*18);
     for(int side=-1;side<=1;side+=2) {
-        int ex=x+side*23;
-        ellipse(r,ex,y-13,16,19,0xffffff);
-        ellipse(r,ex+look,y-10,8,8,0x1a1a2e);
+        int ex=side*23;
+        boss_ellipse(r,&d,ex,-13,16,19,0xffffff);
+        if(g->state==DYING) {
+            color(r,0x1a1a2e);
+            for(int thick=-1;thick<=1;++thick) {
+                boss_line(r,&d,ex-7,-18+thick,ex+7,-4+thick);
+                boss_line(r,&d,ex+7,-18+thick,ex-7,-4+thick);
+            }
+        } else boss_ellipse(r,&d,ex+look,-10,8,8,0x1a1a2e);
         color(r,0x50236e);
-        for(int thick=0;thick<5;++thick)
-            SDL_RenderDrawLine(r,ex+side*14,y-40+thick,ex-side*10,y-30+thick);
+        for(int thick=0;thick<5;++thick)boss_line(r,&d,ex+side*14,-40+thick,ex-side*10,-30+thick);
     }
     color(r,0x1a1a2e);
     for(int dx=-17;dx<=17;++dx) {
-        int mouth=y+25+dx*dx/35;
-        SDL_RenderDrawLine(r,x+dx,mouth,x+dx,mouth+4);
+        int mouth=25+dx*dx/35;boss_line(r,&d,dx,mouth,dx,mouth+4);
     }
 }
 void draw_game(SDL_Renderer *r,const Game *g,float t) {
@@ -108,22 +162,23 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
     for(int i=0;i<MAX_BULLETS;++i)if(g->bullets[i].active) { Entity b=g->bullets[i]; ellipse(r,(int)b.x,(int)b.y,3,8,b.owner?0xff799f:0xffe36e); }
     for(int i=0;i<g->player_count;++i) {
         const Player *p=&g->players[i];
+        if(g->state==PLAYING&&p->health==1)smoke(r,p,t,i);
         if(p->health&&(p->roll_clock>0||p->invincible<=0||(int)(t*12)%2))jet(r,(int)p->x,(int)p->y,t,i,p);
     }
-    if(g->state==PLAYING) {
+    if(g->state==PLAYING||g->state==DYING) {
         for(int i=0;i<g->player_count;++i) {
             const Player *p=&g->players[i]; char hud[64];
             snprintf(hud,sizeof(hud),"P%d AMMO %d SCORE %d HEALTH %d",i+1,p->ammo,p->score,p->health);
             centered(r,18+i*20,hud,2,i?0xff799f:0xbcd4ff);
         }
         if(g->boss.active) {
-            centered(r,60,"BLASTER BOSS",2,0xe0b3ff);
+            centered(r,60,g->state==DYING?"BLASTER DEFEATED!":"BLASTER BOSS",2,0xe0b3ff);
             box(r,48,79,544,5,0x253058);
             box(r,48,79,544*g->boss.health/BOSS_HEALTH,5,0xb44df0);
         } else {
             box(r,48,62,544,3,0x253058); box(r,48,62,544*g->resolved/LEVEL_ENEMIES,3,0x57e89c);
         }
-        centered(r,438,g->boss.active?"DODGE BOSS SHOTS TO EARN BULLETS":"RIGHT STICK TO ROLL AND DODGE",2,0xbcd4ff);
+        centered(r,438,g->state==DYING?"BYE BYE BLASTER!":g->boss.active?"DODGE BOSS SHOTS TO EARN BULLETS":"RIGHT STICK TO ROLL AND DODGE",2,0xbcd4ff);
     } else {
         box(r,45,115,550,223,0x111535);
         if(g->state==MENU) {
@@ -142,7 +197,7 @@ void draw_game(SDL_Renderer *r,const Game *g,float t) {
             }
         }
         centered(r,276,"PRESS START TO FLY",2,0xffffff);
-        centered(r,308,"LEFT STICK MOVE - A SHOOT - RIGHT ROLL",2,0xbcd4ff);
+        centered(r,308,"LEFT MOVE - A OR RT SHOOT - RIGHT ROLL",2,0xbcd4ff);
     }
     SDL_RenderPresent(r);
 }
