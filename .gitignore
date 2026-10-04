@@ -1,0 +1,13 @@
+/build/
+.local/
+*.xbe
+*.iso
+*.qcow2
+*.bin
+*.rom
+*.eeprom
+*.obj
+*.pdb
+*.exe
+*.c.d
+.DS_Store
