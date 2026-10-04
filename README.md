@@ -81,7 +81,7 @@ The compiled prototype was uploaded to a new `F:\Homebrew\Ashleys Fighter Jet\de
 
 ## Attribution and third-party software
 
-This is an independent homebrew game for the original Xbox, based on our family's HTML5 game linked above. It is built using [nxdk](https://github.com/XboxDev/nxdk), the community-maintained open-source development kit, with its Xbox [SDL2 port](https://github.com/XboxDev/SDL). Development uses nxdk rather than Microsoft's proprietary Xbox Development Kit. nxdk is a separate, pinned dependency, not a fork or part of this game's source repository.
+This is an independent homebrew game for the original Xbox, based on our family's HTML5 game linked above. It is built using [nxdk](https://github.com/XboxDev/nxdk), the community-maintained open-source development kit, with its Xbox [SDL2 port](https://github.com/XboxDev/nxdk-sdl). Development uses nxdk rather than Microsoft's proprietary Xbox Development Kit. nxdk is a separate, pinned dependency, not a fork or part of this game's source repository.
 
 [xemu](https://github.com/xemu-project/xemu) is used for emulator testing, and [extract-xiso](https://github.com/XboxDev/extract-xiso) packages the disc image through nxdk. The SDL graphics and controller samples linked above informed the platform setup. The open-source [Fancy Mouse Boot ROM](https://github.com/SnowyMouse/fancy-mouse-boot-rom) and [xemu HDD image project](https://github.com/xemu-project/xemu-hdd-image) are references for the tested emulator configuration.
 
