@@ -51,12 +51,26 @@ The same gameplay/rendering code runs on macOS: Return starts/restarts, arrows s
 - Host preview: SDL2 compatibility 2.32.74.
 - Development machine: M2 MacBook Air, 24 GB RAM, macOS 26.7.
 
-**Compiled:** minimal SDL program and playable prototype, XBE and XISO generated. **Host tests:** collisions, movement bounds, firing cooldown, dodge rewards, damage/invulnerability, loss, all 24 waves, completion, and restart pass with AddressSanitizer/UndefinedBehaviorSanitizer. **Mac visual check:** title, gameplay, UFOs, game over, restart, and shooting consuming ammo verified. **xemu boot/gameplay:** pending user-supplied firmware. **Physical Xbox:** untested.
+**Compiled:** minimal SDL program and playable prototype, XBE and XISO generated. **Host tests:** collisions, movement bounds, firing cooldown, dodge rewards, damage/invulnerability, loss, all 24 waves, completion, and restart pass with AddressSanitizer/UndefinedBehaviorSanitizer. **Mac visual check:** title, gameplay, UFOs, game over, restart, and shooting consuming ammo verified. **xemu boot:** verified on 2026-10-04; title screen visibly running at 64 MB using the Xbox’s existing CerBIOS plus Fancy Mouse 0.9.0 `mouse_rev1.bin` and the official HDD image. **xemu gameplay/controller validation:** pending. **Physical Xbox:** untested.
 
 Known limitations: simple placeholder graphics, one enemy type, deterministic waves, no sound, pickups, boss, shop, persistence, or upgrades. This is an early adaptation, not the complete HTML5 game. nxdk emits library/linker warnings; the game sources compile without warnings. Performance and controller behavior on Xbox still need testing. Emulator results will not establish physical Xbox compatibility. The separate ESP-KVM project is untouched.
 
-Next: supply firmware, boot the minimal build or prototype, verify movement/firing/bonks/restart and level completion in xemu, then improve resemblance to the HTML5 game incrementally. Add GDB only when a concrete issue warrants it; XBDM and a test server are unnecessary for this milestone.
+Next: verify controller input, movement/firing/bonks/restart and level completion in xemu, then improve resemblance to the HTML5 game incrementally. Add GDB only when a concrete issue warrants it; XBDM and a test server are unnecessary for this milestone.
 
 Local installation changes are recorded in [setup notes](docs/setup-notes.md).
 
 References: [nxdk](https://github.com/XboxDev/nxdk), [SDL graphics sample](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/samples/sdl), [controller sample](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/samples/sdl_gamecontroller), [xemu CLI](https://xemu.app/docs/cli/).
+
+## Verified emulator setup
+
+The firmware blocker was resolved with an existing `C:\Cerbios.bin` from the user’s physical Xbox (SHA-256 `c5e9d940faf66692b56a16f7a7d779445c1c6d9191d7e7e31c1c1e8168da0733`), [Fancy Mouse Boot ROM 0.9.0](https://github.com/SnowyMouse/fancy-mouse-boot-rom/releases/tag/0.9.0) `mouse_rev1.bin`, and [xemu HDD image 1.0](https://github.com/xemu-project/xemu-hdd-image/releases/tag/1.0). This particular combination was verified by booting the game; compatibility with other BIOS versions is not implied. No physical Xbox files were modified.
+
+Local system files are kept outside Git under the user’s application-support folder. To repeat this setup on the configured Mac:
+
+```sh
+SYSTEM_FILES="$HOME/Library/Application Support/AshleyFighterJet/system"
+./scripts/run-xemu.py --bootrom "$SYSTEM_FILES/mouse_rev1.bin" \
+  --bios "$SYSTEM_FILES/Cerbios.bin" --hdd "$SYSTEM_FILES/xbox_hdd.qcow2"
+```
+
+The emulator uses its own generated EEPROM; the Xbox’s personal EEPROM and HDD key were not copied. The existing Complex file was labeled BFM and was not used for emulator startup.
