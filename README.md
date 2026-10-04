@@ -2,7 +2,7 @@
 
 A small C adaptation of the HTML5 game made with Ashley. Fly a blue jet through scrolling stars, dodge friendly-looking colorful UFOs, and shoot. Start with 10 bullets; dodging earns one bullet and one point, shooting an alien earns three points. Survive 24 aliens to win (about 32 seconds). Three bonks end the run; Start restarts.
 
-The HTML5 reference is `ZacharyLeahan/ashleyfighterjet`, commit `4ad80b38d9d38fecd79c5dcf823747032a3677a9`. Its title, blue delta jet, navy sky, yellow/orange accents, green UFO pilots, and ammo mechanic guide this adaptation. The reference repository was only read, never modified. This prototype has no Raptor assets or code.
+The HTML5 reference is [Ashley’s Fighter Jet](https://github.com/ZacharyLeahan/ashleyfighterjet), commit `4ad80b38d9d38fecd79c5dcf823747032a3677a9`. Its title, blue delta jet, navy sky, yellow/orange accents, green UFO pilots, and ammo mechanic guide this adaptation. The Xbox adaptation has its own repository and build history; the HTML5 source remains in its original repository. This prototype has no Raptor assets or code.
 
 ## Setup and build on macOS
 
@@ -78,3 +78,13 @@ The emulator uses its own generated EEPROM; the Xbox’s personal EEPROM and HDD
 ## Physical Xbox deployment
 
 The compiled prototype was uploaded to a new `F:\Homebrew\Ashleys Fighter Jet\default.xbe` folder on the user's Xbox on 2026-10-04. FTP readback matched the local build's SHA-256 (`186b6886bb6fb39d75706cd003fa71b94f67ae133310a5d81c5a15141223c85c`). No existing games were overwritten. Physical-console launch and gameplay remain unverified. Refresh the dashboard's Homebrew listing or use its file manager to launch that XBE directly. The local deployment receipt is in ignored `build/xbox-deployment.json`; credentials are not saved.
+
+## Attribution and third-party software
+
+This is an independent homebrew game for the original Xbox, based on our family's HTML5 game linked above. It is built using [nxdk](https://github.com/XboxDev/nxdk), the community-maintained open-source development kit, with its Xbox [SDL2 port](https://github.com/XboxDev/SDL). Development uses nxdk rather than Microsoft's proprietary Xbox Development Kit. nxdk is a separate, pinned dependency, not a fork or part of this game's source repository.
+
+[xemu](https://github.com/xemu-project/xemu) is used for emulator testing, and [extract-xiso](https://github.com/XboxDev/extract-xiso) packages the disc image through nxdk. The SDL graphics and controller samples linked above informed the platform setup. The open-source [Fancy Mouse Boot ROM](https://github.com/SnowyMouse/fancy-mouse-boot-rom) and [xemu HDD image project](https://github.com/xemu-project/xemu-hdd-image) are references for the tested emulator configuration.
+
+Each third-party project retains its own copyright and license terms; describing nxdk as open source does not imply that every bundled component has the same license. Consult [nxdk's license notices](https://github.com/XboxDev/nxdk/tree/14d5ee97e73347c973f1f57b68b79ec08c9e77f2/LICENSES) and the licenses in its pinned submodules before distributing compiled builds. No third-party licensing rights are granted by this repository. No license for this game's original source is granted at present.
+
+BIOS dumps, proprietary boot ROMs, console EEPROMs, disk images, saves, credentials, and local emulator settings are excluded from Git. Obtain any required proprietary files separately with appropriate rights. No Raptor code, artwork, music, names, or levels are included. Xbox is a Microsoft trademark; this independent project is not affiliated with or endorsed by Microsoft or the referenced tool projects.
